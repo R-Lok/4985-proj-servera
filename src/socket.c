@@ -1,3 +1,4 @@
+#include "../include/user.h"
 #include <../include/socket.h>
 #include <arpa/inet.h>
 #include <errno.h>
@@ -15,7 +16,8 @@
 #define POLL_TIMEOUT 1000             // time to wait for each poll call
 
 static void remove_pollfd(struct pollfd *clients, nfds_t index, nfds_t num_clients);
-static int  handle_disconnect_events(struct pollfd *clients, nfds_t *num_clients, pthread_rwlock_t *rwlock);
+static int  handle_disconnect_events(ServerData *sd);
+static int  check_pollins(ServerData *sd);
 
 int setup_addr(struct sockaddr_in *my_addr, in_port_t port, int *err)
 {
@@ -84,31 +86,39 @@ int set_socket_nonblock(int socket_fd, int *err)
 
 int accept_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig_atomic_t *running)
 {
-    atomic_uint      num_threads;
-    struct pollfd   *clients;
-    nfds_t           num_clients;
-    int              ret;
-    pthread_rwlock_t rwlock;
+    atomic_uint num_threads;
+    int         ret;
 
-    num_clients = 0;
-    ret         = EXIT_SUCCESS;
+    ServerData sd;
+
+    sd.num_clients = 0;
+    ret            = EXIT_SUCCESS;
     atomic_store(&num_threads, 0);
 
-    clients = (struct pollfd *)calloc(MAX_CONNECTED_CLIENTS, sizeof(struct pollfd));
-    if(clients == NULL)
+    sd.clients = (struct pollfd *)calloc(MAX_CONNECTED_CLIENTS, sizeof(struct pollfd));
+    if(sd.clients == NULL)
     {
-        fprintf(stderr, "calloc failed in accept_connections\n");
+        fprintf(stderr, "clients calloc failed in accept_connections\n");
         return 1;
     }
 
-    if(pthread_rwlock_init(&rwlock, NULL) != 0)
+    sd.fd_map = (SessionUser *)calloc(MAX_CONNECTED_CLIENTS + 4, sizeof(SessionUser));    // plus 4 as stdin,stdout,stderr,server manager takes up 4 fd's
+    if(sd.fd_map == NULL)
+    {
+        fprintf(stderr, "fd_map calloc failed in accept_connections\n");
+        free(sd.clients);
+        return 1;
+    }
+
+    if(pthread_rwlock_init(&sd.rwlock, NULL) != 0)
     {
         perror("pthread_rwlock_init failed");
-        free(clients);
+        free(sd.clients);
+        free(sd.fd_map);
         return 1;
     }
 
-    while(*running)
+    while(*running == 1)
     {
         int       client_fd;
         socklen_t sock_len;
@@ -128,38 +138,49 @@ int accept_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig
         }
         else
         {
-            clients[num_clients].fd     = client_fd;
-            clients[num_clients].events = POLLIN | POLLERR | POLLHUP;    // set to listen to POLLIN(data in socket) and hangup/disconnect
-            num_clients++;                                               // increment num of clients
+            sd.clients[sd.num_clients].fd     = client_fd;
+            sd.clients[sd.num_clients].events = POLLIN | POLLERR | POLLHUP;    // set to listen to POLLIN(data in socket) and hangup/disconnect
+            sd.num_clients++;                                                  // increment num of clients
         }
 
-        poll_res = poll(clients, num_clients, POLL_TIMEOUT);
+        poll_res = poll(sd.clients, sd.num_clients, POLL_TIMEOUT);
         if(poll_res == -1)    // if poll() had an error:
         {
-            fprintf(stderr, "poll() error\n");
-            ret = EXIT_FAILURE;
-            break;
+            if(errno != EINTR)
+            {
+                fprintf(stderr, "poll() error\n");
+                ret = EXIT_FAILURE;
+                break;
+            }
         }
 
-        if(handle_disconnect_events(clients, &num_clients, &rwlock))    // goes through array to check for disconnects
+        if(handle_disconnect_events(&sd))    // goes through array to check for disconnects
         {
             ret = EXIT_FAILURE;
             break;
         }
+
+        check_pollins(&sd);
+        // if(check_pollins(&sd))
+        // {
+        //     ret = EXIT_FAILURE;
+        //     break;
+        // }
     }
 
-    while(atomic_load(&num_threads) == 0)    // graceful shutdown - makes sure to let threads finish their work
+    while(atomic_load(&num_threads) != 0)    // graceful shutdown - makes sure to let threads finish their work
     {
     }
 
     // close all remaining client fds - need to consider - will there be server message sent to clients
     // indicating the server is shutting down? (future consideration)
-    for(nfds_t i = 0; i < num_clients; i++)
+    for(nfds_t i = 0; i < sd.num_clients; i++)
     {
-        close(clients[i].fd);
+        close(sd.clients[i].fd);
     }
 
-    free(clients);
+    free(sd.clients);
+    free(sd.fd_map);
 
     return ret;
     // atomic_fetch_add(&num_threads, 1);
@@ -177,33 +198,52 @@ static void remove_pollfd(struct pollfd *clients, nfds_t index, nfds_t num_clien
     clients[num_clients - 1].fd = -1;
 }
 
-static int handle_disconnect_events(struct pollfd *clients, nfds_t *num_clients, pthread_rwlock_t *rwlock)
+static int handle_disconnect_events(ServerData *sd)
 {
     int wlock_res;
 
-    wlock_res = pthread_rwlock_wrlock(rwlock);    // get write lock
+    wlock_res = pthread_rwlock_wrlock(&sd->rwlock);    // get write lock
     if(wlock_res != 0)
     {
         fprintf(stderr, "r/w lock wrlock error\n %s\n", strerror(errno));
         return 1;
     }
 
-    for(nfds_t i = 0; i < *num_clients; i++)
+    for(nfds_t i = 0; i < sd->num_clients; i++)
     {
         // Check if POLLERR or POLLHUP occurred
-        if(clients[i].revents & POLLERR || clients[i].revents & POLLHUP)
+        if(sd->clients[i].revents & POLLERR || sd->clients[i].revents & POLLHUP)
         {
-            printf("Error/Hangup occurred on fd %d\n - removing client..\n", clients[i].fd);
-            remove_pollfd(clients, i, *num_clients);
-            num_clients--;
+            printf("Error/Hangup occurred on fd %d\n - removing client..\n", sd->clients[i].fd);
+            remove_pollfd(sd->clients, i, sd->num_clients);
+            sd->num_clients--;
         }
     }
 
-    wlock_res = pthread_rwlock_unlock(rwlock);    // release write lock
+    wlock_res = pthread_rwlock_unlock(&sd->rwlock);    // release write lock
     if(wlock_res != 0)
     {
         fprintf(stderr, "r/w lock unlock error\n %s\n", strerror(errno));
         return 1;
+    }
+    return 0;
+}
+
+static int check_pollins(ServerData *sd)
+{
+    for(nfds_t i = 0; i < sd->num_clients; i++)
+    {
+        if(sd->clients[i].revents & POLLIN)
+        {
+            int client_fd = sd->clients[i].fd;
+            if(sd->fd_map[client_fd].processing == 0)
+            {
+                // make it so no other thread can be spawned to handle this fd until current handling is done (prevent race condition)
+                sd->fd_map[client_fd].processing = 1;
+                // call pthread_create and pass in function -> end of thread function needs to set .processing back to 0;
+                // need to pass in this client_fd + ServerData to thread
+            }
+        }
     }
     return 0;
 }

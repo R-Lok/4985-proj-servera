@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DEFAULT_PORT 8000    // default port if no port arg is entered
+#define DEFAULT_PORT 8000    // default port if no port arg is
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static volatile sig_atomic_t running = 1;    // Global flag for whether the server is running, changed by signal handler
@@ -49,9 +49,7 @@ int main(int argc, char **argv)
     printf("Server running on port %u...\n", port);
 
     // this while loop just here for testing; actual poll loop will be in a function
-    while(running)
-    {
-    }
+    accept_connections(sock_fd, &addr, &running);
 
     return EXIT_SUCCESS;
 }
