@@ -13,11 +13,11 @@
 
 #define MAX_PENDING_CONNECTIONS 10    // max backlogged connections
 #define MAX_CONNECTED_CLIENTS 1024    // max number of connected clients (can change to dynamic resize later if required)
-#define POLL_TIMEOUT 1000             // time to wait for each poll call
+#define POLL_TIMEOUT 500              // time to wait for each poll call
 
 static void remove_pollfd(struct pollfd *clients, nfds_t index, nfds_t num_clients);
-static int  handle_disconnect_events(ServerData *sd);
-static int  check_pollins(ServerData *sd);
+static void handle_disconnect_events(ServerData *sd);
+static int  handle_pollins(const ServerData *sd);
 
 int setup_addr(struct sockaddr_in *my_addr, in_port_t port, int *err)
 {
@@ -84,17 +84,14 @@ int set_socket_nonblock(int socket_fd, int *err)
     return 0;
 }
 
-//This function is really long, I will probably try to abstract it later, but most of the length is due to setting things up, locking, error handling
-int accept_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig_atomic_t *running)
+// This function is really long, I will probably try to abstract it later, but most of the length is due to setting things up, locking, error handling
+int handle_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig_atomic_t *running)
 {
-    atomic_uint num_threads;
-    int         ret;
-
+    int        ret;
     ServerData sd;
 
     sd.num_clients = 0;
     ret            = EXIT_SUCCESS;
-    atomic_store(&num_threads, 0);
 
     sd.clients = (struct pollfd *)calloc(MAX_CONNECTED_CLIENTS, sizeof(struct pollfd));
     if(sd.clients == NULL)
@@ -108,14 +105,6 @@ int accept_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig
     {
         fprintf(stderr, "fd_map calloc failed in accept_connections\n");
         free(sd.clients);
-        return 1;
-    }
-
-    if(pthread_rwlock_init(&sd.rwlock, NULL) != 0)
-    {
-        perror("pthread_rwlock_init failed");
-        free(sd.clients);
-        free(sd.fd_map);
         return 1;
     }
 
@@ -141,20 +130,7 @@ int accept_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig
         {
             sd.clients[sd.num_clients].fd     = client_fd;
             sd.clients[sd.num_clients].events = POLLIN | POLLERR | POLLHUP;    // set to listen to POLLIN(data in socket) and hangup/disconnect
-
-            if(pthread_rwlock_wrlock(&sd.rwlock) != 0)
-            {
-                fprintf(stderr, "r/w lock wrlock error\n %s\n", strerror(errno));
-                ret = EXIT_FAILURE;
-                break;
-            }
-            sd.num_clients++;    // increment num of clients, needs to be write locked due to threads needing to access it
-            if(pthread_rwlock_unlock(&sd.rwlock) != 0)
-            {
-                fprintf(stderr, "r/w unlock error\n %s\n", strerror(errno));
-                ret = EXIT_FAILURE;
-                break;
-            }
+            sd.num_clients++;                                                  // increment num of clients
         }
 
         poll_res = poll(sd.clients, sd.num_clients, POLL_TIMEOUT);
@@ -167,23 +143,14 @@ int accept_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig
                 break;
             }
         }
+        handle_disconnect_events(&sd);    // goes through array to check for disconnects
 
-        if(handle_disconnect_events(&sd))    // goes through array to check for disconnects
-        {
-            ret = EXIT_FAILURE;
-            break;
-        }
-
-        check_pollins(&sd);
+        handle_pollins(&sd);
         // if(check_pollins(&sd))
         // {
         //     ret = EXIT_FAILURE;
         //     break;
         // }
-    }
-
-    while(atomic_load(&num_threads) != 0)    // graceful shutdown - makes sure to let threads finish their work
-    {
     }
     // close all remaining client fds - need to consider - will there be server message sent to clients
     // indicating the server is shutting down? (future consideration)
@@ -191,12 +158,9 @@ int accept_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig
     {
         close(sd.clients[i].fd);
     }
-
     free(sd.clients);
     free(sd.fd_map);
-
     return ret;
-    // atomic_fetch_add(&num_threads, 1);
 }
 
 static void remove_pollfd(struct pollfd *clients, nfds_t index, nfds_t num_clients)
@@ -211,17 +175,8 @@ static void remove_pollfd(struct pollfd *clients, nfds_t index, nfds_t num_clien
     clients[num_clients - 1].fd = -1;
 }
 
-static int handle_disconnect_events(ServerData *sd)
+static void handle_disconnect_events(ServerData *sd)
 {
-    int wlock_res;
-
-    wlock_res = pthread_rwlock_wrlock(&sd->rwlock);    // get write lock
-    if(wlock_res != 0)
-    {
-        fprintf(stderr, "r/w lock wrlock error\n %s\n", strerror(errno));
-        return 1;
-    }
-
     for(nfds_t i = 0; i < sd->num_clients; i++)
     {
         // Check if POLLERR or POLLHUP occurred
@@ -232,30 +187,15 @@ static int handle_disconnect_events(ServerData *sd)
             sd->num_clients--;
         }
     }
-
-    wlock_res = pthread_rwlock_unlock(&sd->rwlock);    // release write lock
-    if(wlock_res != 0)
-    {
-        fprintf(stderr, "r/w lock unlock error\n %s\n", strerror(errno));
-        return 1;
-    }
-    return 0;
 }
 
-static int check_pollins(ServerData *sd)
+static int handle_pollins(const ServerData *sd)
 {
     for(nfds_t i = 0; i < sd->num_clients; i++)
     {
         if(sd->clients[i].revents & POLLIN)
         {
-            int client_fd = sd->clients[i].fd;
-            if(sd->fd_map[client_fd].processing == 0)
-            {
-                // make it so no other thread can be spawned to handle this fd until current handling is done (prevent race condition)
-                sd->fd_map[client_fd].processing = 1;
-                // call pthread_create and pass in function -> end of thread function needs to set .processing back to 0;
-                // need to pass in this client_fd + ServerData to thread
-            }
+            // Function to handle the fd
         }
     }
     return 0;

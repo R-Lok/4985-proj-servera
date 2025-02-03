@@ -48,8 +48,7 @@ int main(int argc, char **argv)
 
     printf("Server running on port %u...\n", port);
 
-    // this while loop just here for testing; actual poll loop will be in a function
-    accept_connections(sock_fd, &addr, &running);
+    handle_connections(sock_fd, &addr, &running);
 
     return EXIT_SUCCESS;
 }

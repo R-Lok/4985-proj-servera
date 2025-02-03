@@ -10,14 +10,12 @@ typedef struct
 {
     char username[MAX_USERNAME_LENGTH];
     uint32_t uid;
-    uint8_t  processing;
 } SessionUser;
 
 typedef struct 
 {
     struct pollfd *clients;
     SessionUser *fd_map;
-    pthread_rwlock_t rwlock;
     nfds_t num_clients;
     
 } ServerData;
