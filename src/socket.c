@@ -4,8 +4,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
-#include <pthread.h>
-#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -186,7 +184,6 @@ static void handle_disconnect_events(ServerData *sd)
             printf("Error/Hangup occurred on fd %d\n - removing client..\n", sd->clients[i].fd);
 
             // close file descriptor, set uid to 0 (not logged in), zero out username
-            close(fd);
             sd->fd_map[fd].uid = 0;
             memset(sd->fd_map[fd].username, 0, sizeof(sd->fd_map[fd].username));
 
