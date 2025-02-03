@@ -117,9 +117,9 @@ int accept_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig
         sock_len  = (socklen_t)sizeof(struct sockaddr_in);
         client_fd = accept(sock_fd, (struct sockaddr *)addr, &sock_len);
 
-        if(client_fd == -1)
+        if(client_fd == -1)    // if accept call failed
         {
-            if(errno != EINTR && errno != EAGAIN && errno != ECONNABORTED)
+            if(errno != EINTR && errno != EAGAIN && errno != ECONNABORTED)    // if it's none of the acceptable errors, exit
             {
                 fprintf(stderr, "accept() error\n");
                 ret = 1;
@@ -130,28 +130,30 @@ int accept_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig
         {
             clients[num_clients].fd     = client_fd;
             clients[num_clients].events = POLLIN | POLLERR | POLLHUP;    // set to listen to POLLIN(data in socket) and hangup/disconnect
-            num_clients++;
+            num_clients++;                                               // increment num of clients
         }
 
         poll_res = poll(clients, num_clients, POLL_TIMEOUT);
-        if(poll_res == -1)
+        if(poll_res == -1)    // if poll() had an error:
         {
             fprintf(stderr, "poll() error\n");
             ret = EXIT_FAILURE;
             break;
         }
 
-        if(handle_disconnect_events(clients, &num_clients, &rwlock))
+        if(handle_disconnect_events(clients, &num_clients, &rwlock))    // goes through array to check for disconnects
         {
             ret = EXIT_FAILURE;
             break;
         }
     }
 
-    while(atomic_load(&num_threads) == 0)
+    while(atomic_load(&num_threads) == 0)    // graceful shutdown - makes sure to let threads finish their work
     {
     }
 
+    // close all remaining client fds - need to consider - will there be server message sent to clients
+    // indicating the server is shutting down? (future consideration)
     for(nfds_t i = 0; i < num_clients; i++)
     {
         close(clients[i].fd);
@@ -167,8 +169,10 @@ static void remove_pollfd(struct pollfd *clients, nfds_t index, nfds_t num_clien
 {
     if(close(clients[index].fd) == -1)
     {
+        // if fail to close, can't really do anything about it anyways but print - unless we want to keep trying to close it?
         fprintf(stderr, "Failed to close client socket - %s\n", strerror(errno));
     }
+    // copy fd of last element in array to this index. Set fd of the (previously) last element to -1 (poll ignores -1)
     clients[index].fd           = clients[num_clients - 1].fd;
     clients[num_clients - 1].fd = -1;
 }
@@ -177,7 +181,7 @@ static int handle_disconnect_events(struct pollfd *clients, nfds_t *num_clients,
 {
     int wlock_res;
 
-    wlock_res = pthread_rwlock_wrlock(rwlock);
+    wlock_res = pthread_rwlock_wrlock(rwlock);    // get write lock
     if(wlock_res != 0)
     {
         fprintf(stderr, "r/w lock wrlock error\n %s\n", strerror(errno));
@@ -195,12 +199,11 @@ static int handle_disconnect_events(struct pollfd *clients, nfds_t *num_clients,
         }
     }
 
-    wlock_res = pthread_rwlock_unlock(rwlock);
+    wlock_res = pthread_rwlock_unlock(rwlock);    // release write lock
     if(wlock_res != 0)
     {
         fprintf(stderr, "r/w lock unlock error\n %s\n", strerror(errno));
         return 1;
     }
-
     return 0;
 }
