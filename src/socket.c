@@ -182,7 +182,14 @@ static void handle_disconnect_events(ServerData *sd)
         // Check if POLLERR or POLLHUP occurred
         if(sd->clients[i].revents & POLLERR || sd->clients[i].revents & POLLHUP)
         {
+            const int fd = sd->clients[i].fd;
             printf("Error/Hangup occurred on fd %d\n - removing client..\n", sd->clients[i].fd);
+
+            // close file descriptor, set uid to 0 (not logged in), zero out username
+            close(fd);
+            sd->fd_map[fd].uid = 0;
+            memset(sd->fd_map[fd].username, 0, sizeof(sd->fd_map[fd].username));
+
             remove_pollfd(sd->clients, i, sd->num_clients);
             sd->num_clients--;
         }
