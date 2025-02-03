@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DEFAULT_PORT 8000 //default port if no port arg is entered
+#define DEFAULT_PORT 8000    // default port if no port arg is entered
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static volatile sig_atomic_t running = 1; //Global flag for whether the server is running, changed by signal handler
+static volatile sig_atomic_t running = 1;    // Global flag for whether the server is running, changed by signal handler
 
 void handle_signal(int signal);
 
@@ -40,7 +40,7 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    if(set_socket_nonblock(sock_fd, &err)) //set socket to non-blocking 
+    if(set_socket_nonblock(sock_fd, &err))    // set socket to non-blocking
     {
         fprintf(stdout, "Error setting socket to non-blocking - %s\n", strerror(err));
         exit(EXIT_FAILURE);
