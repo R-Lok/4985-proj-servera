@@ -84,6 +84,7 @@ int set_socket_nonblock(int socket_fd, int *err)
     return 0;
 }
 
+//This function is really long, I will probably try to abstract it later, but most of the length is due to setting things up, locking, error handling
 int accept_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig_atomic_t *running)
 {
     atomic_uint num_threads;
