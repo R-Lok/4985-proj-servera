@@ -140,7 +140,20 @@ int accept_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig
         {
             sd.clients[sd.num_clients].fd     = client_fd;
             sd.clients[sd.num_clients].events = POLLIN | POLLERR | POLLHUP;    // set to listen to POLLIN(data in socket) and hangup/disconnect
-            sd.num_clients++;                                                  // increment num of clients
+
+            if(pthread_rwlock_wrlock(&sd.rwlock) != 0)
+            {
+                fprintf(stderr, "r/w lock wrlock error\n %s\n", strerror(errno));
+                ret = EXIT_FAILURE;
+                break;
+            }
+            sd.num_clients++;    // increment num of clients, needs to be write locked due to threads needing to access it
+            if(pthread_rwlock_unlock(&sd.rwlock) != 0)
+            {
+                fprintf(stderr, "r/w unlock error\n %s\n", strerror(errno));
+                ret = EXIT_FAILURE;
+                break;
+            }
         }
 
         poll_res = poll(sd.clients, sd.num_clients, POLL_TIMEOUT);
@@ -171,7 +184,6 @@ int accept_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig
     while(atomic_load(&num_threads) != 0)    // graceful shutdown - makes sure to let threads finish their work
     {
     }
-
     // close all remaining client fds - need to consider - will there be server message sent to clients
     // indicating the server is shutting down? (future consideration)
     for(nfds_t i = 0; i < sd.num_clients; i++)
