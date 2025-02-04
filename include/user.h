@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include <poll.h>
 
-#define MAX_USERNAME_LENGTH 32
+#define MAX_USERNAME_LENGTH 33 //including \0 terminator
 
 typedef struct
 {
