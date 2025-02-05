@@ -1,6 +1,9 @@
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
+/*Header size in bytes*/
+//#define HEADER_SIZE 6
+
 /*Client and Server Packet types*/
 // #define SYS_SUCCESS 0
 // #define SYS_ERROR 1
