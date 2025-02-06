@@ -81,10 +81,10 @@ int send_sys_error(int fd, uint8_t err_code, char *err_msg)
 
     payload_fields[0].data            = &err_code;
     payload_fields[0].data_size_bytes = sizeof(err_code);
-    payload_fields[0].ber_num         = P_INTEGER;
+    payload_fields[0].ber_tag         = P_INTEGER;
     payload_fields[1].data            = err_msg;
     payload_fields[1].data_size_bytes = err_msg_len;
-    payload_fields[1].ber_num         = P_UTF8STRING;
+    payload_fields[1].ber_tag         = P_UTF8STRING;
 
     payload = construct_payload(payload_fields, 2, hd.payload_len);
     if(payload == NULL)
@@ -127,6 +127,8 @@ void pickle_header(char *arr, const HeaderData *hd)
     memcpy(arr + 4, &host_order_payload_len, sizeof(host_order_payload_len));
 }
 
+/*MAKE SURE THE PAYLOAD_FIELDS ELEMENTS ARE IN THE SAME ORDER AS LISTED IN THE PROTOCOL!
+ALSO MAKE SURE THAT payload_len ACCOUNTS FOR THE BYTES NEEDED BY THE BER TAG + BER LENGTH */
 char *construct_payload(PayloadField *payload_fields, size_t num_fields, size_t payload_len)
 {
     char *payload;
@@ -142,7 +144,7 @@ char *construct_payload(PayloadField *payload_fields, size_t num_fields, size_t 
 
     for(size_t i = 0; i < num_fields; i++)
     {
-        *(payload++) = (char)payload_fields[i].ber_num;
+        *(payload++) = (char)payload_fields[i].ber_tag;
         *(payload++) = (char)payload_fields[i].data_size_bytes;
         memcpy(payload, payload_fields[i].data, payload_fields[i].data_size_bytes);
         payload += payload_fields[i].data_size_bytes;

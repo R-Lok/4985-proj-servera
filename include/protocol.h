@@ -52,7 +52,7 @@ typedef struct
 typedef struct
 {
     // cppcheck-suppress unusedStructMember
-    uint8_t ber_num;
+    uint8_t ber_tag;
     // cppcheck-suppress unusedStructMember
     size_t data_size_bytes;
     // cppcheck-suppress unusedStructMember
