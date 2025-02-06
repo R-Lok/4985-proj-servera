@@ -6,6 +6,7 @@
 
 #define PROTOCOL_VERSION 1
 #define SYSTEM_ID 0
+#define EXTRA_BYTES_FOR_BER_AND_LENGTH 2
 
 /*Header size in bytes*/
 #define HEADER_SIZE 6
@@ -26,10 +27,11 @@
 
 /*BER Tags (P prefix to not confuse with any C reserved keywords)*/
 // #define P_BOOLEAN 1
-// #define P_INTEGER 2
+#define P_INTEGER 2
 // #define P_NULL 5
 // #define P_ENUMERATED 10
-// #define P_UTF8STRING 12
+#define P_UTF8STRING 12
+
 // #define P_SEQUENCE 16
 // #define P_PRINTABLESTRING 19
 // #define P_UTC_TIME 23
@@ -50,9 +52,11 @@ typedef struct
 typedef struct
 {
     // cppcheck-suppress unusedStructMember
-    void *data;
+    uint8_t ber_num;
     // cppcheck-suppress unusedStructMember
     size_t data_size_bytes;
+    // cppcheck-suppress unusedStructMember
+    void *data;
 } PayloadField;
 
 #endif
