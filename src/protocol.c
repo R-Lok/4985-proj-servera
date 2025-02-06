@@ -98,7 +98,7 @@ int send_sys_error(int fd, uint8_t err_code, char *err_msg)
         goto message_fail;
     }
 
-    if(write_fully(fd, message, (size_t)HEADER_SIZE + hd.payload_len))
+    if(write_fully(fd, message, (size_t)HEADER_SIZE + hd.payload_len) == WRITE_ERROR)    // need to also handle TIMEOUT (send sys error to indicate timeout)
     {
         fprintf(stderr, "Error sending sys error\n");
         ret = 1;

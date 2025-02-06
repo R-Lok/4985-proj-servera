@@ -5,12 +5,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#define FULLY_READ 0
-#define FULLY_WRITTEN 0
-#define WRITE_ERROR 1
-#define READ_ERROR 1
-#define CLIENT_DISCONNECTED 2
-#define TIMEOUT 3
 #define TIMEOUT_DURATION 50    // ms
 #define MS_PER_SECOND 1000
 
