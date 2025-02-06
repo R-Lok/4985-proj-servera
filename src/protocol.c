@@ -1,5 +1,7 @@
 #include "../include/protocol.h"
 #include "../include/io.h"
+#include "../include/request_handlers.h"
+#include "../include/user.h"
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,10 +11,12 @@ void  extract_header(const char *buffer, HeaderData *header);
 int   is_valid_header(const HeaderData *header);
 int   is_valid_version(uint8_t protocol_ver);
 int   is_valid_packet_type(uint8_t packet_type);
-int   send_sys_error(int fd, uint8_t err_code, char *err_msg);
+int   send_sys_error(int fd, uint8_t err_code, const char *err_msg);
 void  pickle_header(char *arr, const HeaderData *hd);
 char *construct_payload(PayloadField *payload_fields, size_t num_fields, size_t payload_len);
 char *construct_message(const char *header, const char *payload, size_t header_len, size_t payload_len);
+char *malloc_payload_buffer(uint16_t payload_len);
+int   handle_read_request_res(int res, int fd);
 
 void extract_header(const char *buffer, HeaderData *header)
 {
@@ -53,7 +57,7 @@ int is_valid_packet_type(uint8_t packet_type)
     }
 }
 
-int send_sys_error(int fd, uint8_t err_code, char *err_msg)
+int send_sys_error(int fd, uint8_t err_code, const char *err_msg)
 {
     HeaderData   hd;
     char        *header;
@@ -62,6 +66,7 @@ int send_sys_error(int fd, uint8_t err_code, char *err_msg)
     PayloadField payload_fields[2];
     size_t       err_msg_len;
     int          ret;
+    char        *temp_err_msg;
 
     ret             = 0;
     err_msg_len     = strlen(err_msg);
@@ -78,11 +83,18 @@ int send_sys_error(int fd, uint8_t err_code, char *err_msg)
     }
 
     pickle_header(header, &hd);
+    temp_err_msg = (char *)malloc(err_msg_len + 1);
+    if(temp_err_msg == NULL)
+    {
+        fprintf(stderr, "malloc() err\n");
+        goto payload_fail;
+    }
+    strncpy(temp_err_msg, err_msg, err_msg_len);
 
     payload_fields[0].data            = &err_code;
     payload_fields[0].data_size_bytes = sizeof(err_code);
     payload_fields[0].ber_tag         = P_INTEGER;
-    payload_fields[1].data            = err_msg;
+    payload_fields[1].data            = temp_err_msg;
     payload_fields[1].data_size_bytes = err_msg_len;
     payload_fields[1].ber_tag         = P_UTF8STRING;
 
@@ -107,10 +119,10 @@ int send_sys_error(int fd, uint8_t err_code, char *err_msg)
     }
 
     free(message);
-    printf("%d", fd);
 message_fail:
     free(payload);
 payload_fail:
+    free(temp_err_msg);
     free(header);
     return ret;
 }
@@ -166,4 +178,78 @@ char *construct_message(const char *header, const char *payload, size_t header_l
     memcpy(msg + header_len, payload, payload_len);
 
     return msg;
+}
+
+int handle_fd(int fd, ServerData *server_data)
+{
+    int            ret;
+    char           header_buffer[HEADER_SIZE];
+    char          *payload_buffer;
+    int            read_header_result;
+    int            read_payload_result;
+    HeaderData     hd;
+    RequestHandler handler;
+
+    read_header_result = read_fully(fd, header_buffer, HEADER_SIZE);
+    if(handle_read_request_res(read_header_result, fd))
+    {
+        ret = 1;
+        goto end;
+    }
+
+    extract_header(header_buffer, &hd);
+    if(is_valid_header(&hd))
+    {
+        send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);
+    }
+
+    payload_buffer = malloc_payload_buffer(hd.payload_len);
+    if(payload_buffer == NULL)
+    {
+        return 1;
+    }
+
+    read_payload_result = read_fully(fd, payload_buffer, hd.payload_len);
+    if(handle_read_request_res(read_payload_result, fd))
+    {
+        ret = 1;
+        goto end;
+    }
+
+    handler = get_handler_function(hd.packet_type);
+    ret     = handler(server_data, &hd, payload_buffer);
+
+    free(payload_buffer);
+end:
+    return ret;
+}
+
+char *malloc_payload_buffer(uint16_t payload_len)
+{
+    char *buffer;
+
+    buffer = (char *)malloc(payload_len);
+    if(buffer == NULL)
+    {
+        fprintf(stderr, "malloc_payload_buffer error\n");
+        return NULL;
+    }
+    return buffer;
+}
+
+int handle_read_request_res(int res, int fd)
+{
+    if(res == TIMEOUT)
+    {    // error handling here a bit dodgy, revisit later
+        if(send_sys_error(fd, P_TIMEOUT, P_TIMEOUT_MSG))
+        {
+            return 1;
+        }
+    }
+    if(res == READ_ERROR)
+    {
+        send_sys_error(fd, P_SERVER_FAILURE, P_SERVER_FAILURE_MSG);
+        return 1;
+    }
+    return 0;
 }

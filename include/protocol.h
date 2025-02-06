@@ -1,6 +1,7 @@
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
+#include "../include/user.h"
 #include <inttypes.h>
 #include <stddef.h>
 
@@ -20,10 +21,16 @@
 #define ACC_CREATE 13
 
 /*Server-Client Error codes*/
-// #define INVALID_USER_ID 11
-// #define INVALID_AUTH_INFO 12
-// #define USER_EXISTS 13 //If signing up with taken name
-// #define SERVER_FAILURE 21 //if server has error and cannot fulfill the request
+// #define P_INVALID_USER_ID 11
+// #define P_INVALID_AUTH_INFO 12
+// #define P_USER_EXISTS 13 //If signing up with taken name
+#define P_SERVER_FAILURE 21    // if server has error and cannot fulfill the request
+#define P_BAD_REQUEST 31
+#define P_TIMEOUT 32
+
+#define P_BAD_REQUEST_MSG "Bad Request"
+#define P_TIMEOUT_MSG "Request Timed"
+#define P_SERVER_FAILURE_MSG "Server Error"
 
 /*BER Tags (P prefix to not confuse with any C reserved keywords)*/
 // #define P_BOOLEAN 1
@@ -36,6 +43,8 @@
 // #define P_PRINTABLESTRING 19
 // #define P_UTC_TIME 23
 // #define P_GENERALIZED_TIME 24
+
+#define PAYLOAD_READ_BUF_SIZE 1024
 
 typedef struct
 {
@@ -58,5 +67,7 @@ typedef struct
     // cppcheck-suppress unusedStructMember
     void *data;
 } PayloadField;
+
+int handle_fd(int fd, ServerData *server_data);
 
 #endif

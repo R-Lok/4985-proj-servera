@@ -1,3 +1,4 @@
+#include "../include/protocol.h"
 #include "../include/user.h"
 #include <../include/socket.h>
 #include <arpa/inet.h>
@@ -15,7 +16,7 @@
 
 static void remove_pollfd(struct pollfd *clients, nfds_t index, nfds_t num_clients);
 static void handle_disconnect_events(ServerData *sd);
-static int  handle_pollins(const ServerData *sd);
+static int  handle_pollins(ServerData *sd);
 
 int setup_addr(struct sockaddr_in *my_addr, in_port_t port, int *err)
 {
@@ -193,13 +194,13 @@ static void handle_disconnect_events(ServerData *sd)
     }
 }
 
-static int handle_pollins(const ServerData *sd)
+static int handle_pollins(ServerData *sd)
 {
     for(nfds_t i = 0; i < sd->num_clients; i++)
     {
         if(sd->clients[i].revents & POLLIN)
         {
-            // Function to handle the fd
+            handle_fd(sd->clients[i].fd, sd);
         }
     }
     return 0;

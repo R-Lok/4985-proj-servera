@@ -5,7 +5,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#define TIMEOUT_DURATION 50    // ms
+#define TIMEOUT_DURATION 100    // ms
 #define MS_PER_SECOND 1000
 
 int read_fully(int fd, char *buffer, size_t bytes_to_read)
@@ -25,6 +25,7 @@ int read_fully(int fd, char *buffer, size_t bytes_to_read)
         elapsed_time_ms = (double)(current_tick - start_tick) * MS_PER_SECOND / CLOCKS_PER_SEC;
         if(elapsed_time_ms > TIMEOUT_DURATION)
         {
+            printf("Timed Out\n");
             return TIMEOUT;
         }
         nread = read(fd, buffer + tread, bytes_to_read - tread);
