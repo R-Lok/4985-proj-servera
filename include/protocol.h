@@ -3,16 +3,18 @@
 
 #include <inttypes.h>
 
+#define PROTOCOL_VERSION 1
+
 /*Header size in bytes*/
 // #define HEADER_SIZE 6
 
 /*Client and Server Packet types*/
 // #define SYS_SUCCESS 0
 // #define SYS_ERROR 1
-// #define ACC_LOGIN 10 //User request to log in
+#define ACC_LOGIN 10    // User request to log in
 // #define ACC_LOGIN_SUCCESS 11 //System response that log in was successful
-// #define ACC_LOGOUT 12 //User request to log out
-// #define ACC_CREATE 13
+#define ACC_LOGOUT 12    // User request to log out
+#define ACC_CREATE 13
 
 /*Server-Client Error codes*/
 // #define INVALID_USER_ID 11
