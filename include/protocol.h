@@ -1,6 +1,8 @@
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
+#include <inttypes.h>
+
 /*Header size in bytes*/
 // #define HEADER_SIZE 6
 
@@ -28,5 +30,17 @@
 // #define P_PRINTABLESTRING 19
 // #define P_UTC_TIME 23
 // #define P_GENERALIZED_TIME 24
+
+typedef struct
+{
+    // cppcheck-suppress unusedStructMember
+    uint8_t packet_type;
+    // cppcheck-suppress unusedStructMember
+    uint8_t protocol_ver;
+    // cppcheck-suppress unusedStructMember
+    uint16_t sender_id;
+    // cppcheck-suppress unusedStructMember
+    uint16_t payload_len;
+} HeaderData;
 
 #endif
