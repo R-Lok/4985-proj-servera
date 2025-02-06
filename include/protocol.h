@@ -2,15 +2,17 @@
 #define PROTOCOL_H
 
 #include <inttypes.h>
+#include <stddef.h>
 
 #define PROTOCOL_VERSION 1
+#define SYSTEM_ID 0
 
 /*Header size in bytes*/
-// #define HEADER_SIZE 6
+#define HEADER_SIZE 6
 
 /*Client and Server Packet types*/
 // #define SYS_SUCCESS 0
-// #define SYS_ERROR 1
+#define SYS_ERROR 1
 #define ACC_LOGIN 10    // User request to log in
 // #define ACC_LOGIN_SUCCESS 11 //System response that log in was successful
 #define ACC_LOGOUT 12    // User request to log out
@@ -44,5 +46,13 @@ typedef struct
     // cppcheck-suppress unusedStructMember
     uint16_t payload_len;
 } HeaderData;
+
+typedef struct
+{
+    // cppcheck-suppress unusedStructMember
+    void *data;
+    // cppcheck-suppress unusedStructMember
+    size_t data_size_bytes;
+} PayloadField;
 
 #endif
