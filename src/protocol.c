@@ -1,4 +1,5 @@
 #include "../include/protocol.h"
+#include "../include/io.h"
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +12,7 @@ int   is_valid_packet_type(uint8_t packet_type);
 int   send_sys_error(int fd, uint8_t err_code, char *err_msg);
 void  pickle_header(char *arr, const HeaderData *hd);
 char *construct_payload(PayloadField *payload_fields, size_t num_fields, size_t payload_len);
+char *construct_message(const char *header, const char *payload, size_t header_len, size_t payload_len);
 
 void extract_header(const char *buffer, HeaderData *header)
 {
@@ -56,6 +58,7 @@ int send_sys_error(int fd, uint8_t err_code, char *err_msg)
     HeaderData   hd;
     char        *header;
     char        *payload;
+    char        *message;
     PayloadField payload_fields[2];
     size_t       err_msg_len;
     int          ret;
@@ -88,7 +91,22 @@ int send_sys_error(int fd, uint8_t err_code, char *err_msg)
         goto payload_fail;
     }
 
+    message = construct_message(header, payload, HEADER_SIZE, hd.payload_len);
+    if(message == NULL)
+    {
+        ret = 1;
+        goto message_fail;
+    }
+
+    if(write_fully(fd, message, (size_t)HEADER_SIZE + hd.payload_len))
+    {
+        fprintf(stderr, "Error sending sys error\n");
+        ret = 1;
+    }
+
+    free(message);
     printf("%d", fd);
+message_fail:
     free(payload);
 payload_fail:
     free(header);
@@ -126,4 +144,20 @@ char *construct_payload(PayloadField *payload_fields, size_t num_fields, size_t 
         payload += payload_fields[i].data_size_bytes;
     }
     return payload_ptr_copy;
+}
+
+char *construct_message(const char *header, const char *payload, size_t header_len, size_t payload_len)
+{
+    char *msg;
+    msg = (char *)malloc(header_len + payload_len);
+    if(msg == NULL)
+    {
+        fprintf(stderr, "malloc error - construct_message\n");
+        return NULL;
+    }
+
+    memcpy(msg, header, header_len);
+    memcpy(msg + header_len, payload, payload_len);
+
+    return msg;
 }
