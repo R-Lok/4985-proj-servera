@@ -15,6 +15,7 @@
 #define POLL_TIMEOUT 500              // time to wait for each poll call
 
 static void remove_pollfd(struct pollfd *clients, nfds_t index, nfds_t num_clients);
+static int  handle_new_client(int client_fd, ServerData *sd);
 static void handle_disconnect_events(ServerData *sd);
 static int  handle_pollins(ServerData *sd);
 
@@ -127,9 +128,10 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig
         }
         else
         {
-            sd.clients[sd.num_clients].fd     = client_fd;
-            sd.clients[sd.num_clients].events = POLLIN | POLLERR | POLLHUP;    // set to listen to POLLIN(data in socket) and hangup/disconnect
-            sd.num_clients++;                                                  // increment num of clients
+            if(handle_new_client(client_fd, &sd))
+            {
+                close(client_fd);    // I'm gonna have to think about this. Maybe send a internal server error. Will revisit.
+            }
         }
 
         poll_res = poll(sd.clients, sd.num_clients, POLL_TIMEOUT);
@@ -203,5 +205,19 @@ static int handle_pollins(ServerData *sd)
             handle_fd(sd->clients[i].fd, sd);
         }
     }
+    return 0;
+}
+
+static int handle_new_client(int client_fd, ServerData *sd)
+{
+    int err;
+    if(set_socket_nonblock(client_fd, &err))
+    {
+        fprintf(stderr, "Failed to set client_fd to non-blocking - %s\n", strerror(err));
+        return 1;
+    }
+    sd->clients[sd->num_clients].fd     = client_fd;
+    sd->clients[sd->num_clients].events = POLLIN | POLLERR | POLLHUP;    // set to listen to POLLIN(data in socket) and hangup/disconnect
+    sd->num_clients++;                                                   // increment num of clients
     return 0;
 }

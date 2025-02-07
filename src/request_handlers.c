@@ -28,6 +28,7 @@ RequestHandler get_handler_function(uint8_t packet_type)
     // }
 }
 
+// This will get rewritten - was only written so we could test with a client group - it successfully printed out the username and password.
 int handle_login(const ServerData *sd, const HeaderData *hd, char *payload_buffer)
 {
     uint8_t name_len;

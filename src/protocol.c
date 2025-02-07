@@ -68,8 +68,10 @@ int send_sys_error(int fd, uint8_t err_code, const char *err_msg)
     int          ret;
     char        *temp_err_msg;
 
-    ret             = 0;
-    err_msg_len     = strlen(err_msg);
+    ret         = 0;
+    err_msg_len = strlen(err_msg);
+
+    // Filling in struct data, so we can use it to construct the serialized header array.
     hd.packet_type  = SYS_ERROR;
     hd.protocol_ver = PROTOCOL_VERSION;
     hd.sender_id    = SYSTEM_ID;
@@ -82,6 +84,7 @@ int send_sys_error(int fd, uint8_t err_code, const char *err_msg)
         return 1;
     }
 
+    // Use HeaderData struct to fill in the serialized Header array.
     pickle_header(header, &hd);
     temp_err_msg = (char *)malloc(err_msg_len + 1);
     if(temp_err_msg == NULL)
@@ -89,8 +92,9 @@ int send_sys_error(int fd, uint8_t err_code, const char *err_msg)
         fprintf(stderr, "malloc() err\n");
         goto payload_fail;
     }
-    strncpy(temp_err_msg, err_msg, err_msg_len);
+    strncpy(temp_err_msg, err_msg, err_msg_len);    // We need to copy the err_msg into a char *, as it is a const char *, which we cannot use (compiler cries)
 
+    // Fill in the payload fields. SYS error has two fields, so fill in two PayloadField structs. (order matters - has to match protocol)
     payload_fields[0].data            = &err_code;
     payload_fields[0].data_size_bytes = sizeof(err_code);
     payload_fields[0].ber_tag         = P_INTEGER;
@@ -98,6 +102,7 @@ int send_sys_error(int fd, uint8_t err_code, const char *err_msg)
     payload_fields[1].data_size_bytes = err_msg_len;
     payload_fields[1].ber_tag         = P_UTF8STRING;
 
+    // Payload here means the body of the request
     payload = construct_payload(payload_fields, 2, hd.payload_len);
     if(payload == NULL)
     {
@@ -105,6 +110,7 @@ int send_sys_error(int fd, uint8_t err_code, const char *err_msg)
         goto payload_fail;
     }
 
+    // Message = Header + Payload
     message = construct_message(header, payload, HEADER_SIZE, hd.payload_len);
     if(message == NULL)
     {
@@ -143,6 +149,8 @@ void pickle_header(char *arr, const HeaderData *hd)
 ALSO MAKE SURE THAT payload_len ACCOUNTS FOR THE BYTES NEEDED BY THE BER TAG + BER LENGTH */
 char *construct_payload(PayloadField *payload_fields, size_t num_fields, size_t payload_len)
 {
+    // This function may be hard to wrap your head around - I'm just iterating through all the PayloadField structs, and writing them into the
+    // payload buffer. This works regardless of data type cause the struct uses a void pointer to point to the data. It makes this function reuseable.
     char *payload;
     char *payload_ptr_copy;
 
@@ -164,6 +172,7 @@ char *construct_payload(PayloadField *payload_fields, size_t num_fields, size_t 
     return payload_ptr_copy;
 }
 
+// Combines header and payload to make the full message
 char *construct_message(const char *header, const char *payload, size_t header_len, size_t payload_len)
 {
     char *msg;
@@ -180,6 +189,7 @@ char *construct_message(const char *header, const char *payload, size_t header_l
     return msg;
 }
 
+// In the works, it's pretty much complete but the handler function pointer needs work to ensure all message types are covered.
 int handle_fd(int fd, ServerData *server_data)
 {
     int            ret;
