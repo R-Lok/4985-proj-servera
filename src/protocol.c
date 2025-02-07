@@ -199,6 +199,7 @@ int handle_fd(int fd, ServerData *server_data)
     int            read_payload_result;
     HeaderData     hd;
     RequestHandler handler;
+    HandlerArgs    ha;
 
     read_header_result = read_fully(fd, header_buffer, HEADER_SIZE);
     if(handle_read_request_res(read_header_result, fd))
@@ -226,8 +227,11 @@ int handle_fd(int fd, ServerData *server_data)
         goto end;
     }
 
-    handler = get_handler_function(hd.packet_type);
-    ret     = handler(server_data, &hd, payload_buffer);
+    handler           = get_handler_function(hd.packet_type);
+    ha.hd             = &hd;
+    ha.payload_buffer = payload_buffer;
+    ha.sd             = server_data;
+    ret               = handler(&ha);
 
     free(payload_buffer);
 end:

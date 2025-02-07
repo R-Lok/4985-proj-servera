@@ -3,8 +3,18 @@
 #include "../include/protocol.h"
 #include "../include/user.h"
 
+typedef struct
+{
+    // cppcheck-suppress unusedStructMember
+    ServerData *sd;
+    // cppcheck-suppress unusedStructMember
+    HeaderData *hd;
+    // cppcheck-suppress unusedStructMember
+    char *payload_buffer;
+} HandlerArgs;
+
 // THIS TYPEDEF WILL GET CHANGED, CURRENTLY CANNOT COVER ALL REQUEST TYPES AS COMPILER CRIES ABOUT WHETHER ServerData * is const or not.
-typedef int (*RequestHandler)(const ServerData *, const HeaderData *, char *);
+typedef int (*RequestHandler)(HandlerArgs *);
 
 RequestHandler get_handler_function(uint8_t packet_type);
 
