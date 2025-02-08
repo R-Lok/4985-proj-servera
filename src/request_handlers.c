@@ -13,7 +13,7 @@ int handle_acc_create(HandlerArgs *args, int fd);
 
 // int extract_login_fields(uint16_t reported_payload_length, char *p_buffer, char *name, char *password);
 
-int extract_field(char *payload_ptr, void *buffer, uint16_t *byte_threshold, uint8_t ber_tag);
+int extract_field(char **payload_ptr, void *buffer, uint16_t *byte_threshold, uint8_t ber_tag);
 
 RequestHandler get_handler_function(uint8_t packet_type)
 {
@@ -46,13 +46,13 @@ int handle_login(HandlerArgs *args, int fd)
 
     ret = 0;
 
-    if(extract_field(args->payload_buffer, username, &remaining_bytes, P_UTF8STRING))
+    if(extract_field(&args->payload_buffer, username, &remaining_bytes, P_UTF8STRING))
     {
         send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);    // need error handling
         return 0;
     }
 
-    if(extract_field(args->payload_buffer, password, &remaining_bytes, P_UTF8STRING))
+    if(extract_field(&args->payload_buffer, password, &remaining_bytes, P_UTF8STRING))
     {
         send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);    // need error handling
         return 0;
@@ -75,9 +75,9 @@ int handle_login(HandlerArgs *args, int fd)
  * if you provided the P_UTF8STRING ber_tag.
  *
  * If you are unsure how to incorporate this into a handle_xxxx function and the setup it requires, read handle_login to get an idea
- * of what the calling function needs in order to make use of the payload length checking. 
+ * of what the calling function needs in order to make use of the payload length checking.
  */
-int extract_field(char *payload_ptr, void *buffer, uint16_t *byte_threshold, uint8_t ber_tag)
+int extract_field(char **payload_ptr, void *buffer, uint16_t *byte_threshold, uint8_t ber_tag)
 {
     const int SUCCESS                 = 0;
     const int INCORRECT_FIELD_TYPE    = 1;
@@ -87,37 +87,43 @@ int extract_field(char *payload_ptr, void *buffer, uint16_t *byte_threshold, uin
 
     buffer_ptr = (char *)buffer;
 
-    if(*payload_ptr++ != (char)ber_tag)
+    if(**payload_ptr != (char)ber_tag)
     {
         return INCORRECT_FIELD_TYPE;
     }
+    (*payload_ptr)++;
 
-    data_len = *(uint8_t *)(payload_ptr++);
+    data_len = *(uint8_t *)(*payload_ptr);
+    (*payload_ptr)++;
 
     if(data_len > *byte_threshold - 2)
     {
         return PAYLOAD_LENGTH_MISMATCH;
     }
 
-    memcpy(buffer_ptr, payload_ptr, data_len);
+    memcpy(buffer_ptr, *payload_ptr, data_len);
+
+    *payload_ptr += data_len;
+
     if(ber_tag == P_UTF8STRING)
     {
         buffer_ptr[data_len] = '\0';
     }
+
     *byte_threshold = (uint16_t)(*byte_threshold - data_len - 2);
 
     return SUCCESS;
 }
 
-//Below function is obsolete but i will keep it here for now for reference in the future.
-// int extract_login_fields(uint16_t reported_payload_length, char *p_buffer, char *name, char *password)
-// {
-//     const int SUCCESS                 = 0;
-//     const int INCORRECT_FIELD_TYPE    = 1;
-//     const int PAYLOAD_LENGTH_MISMATCH = 2;
-//     int       payload_length_sum;
-//     uint8_t   name_len;
-//     uint8_t   password_len;
+// Below function is obsolete but i will keep it here for now for reference in the future.
+//  int extract_login_fields(uint16_t reported_payload_length, char *p_buffer, char *name, char *password)
+//  {
+//      const int SUCCESS                 = 0;
+//      const int INCORRECT_FIELD_TYPE    = 1;
+//      const int PAYLOAD_LENGTH_MISMATCH = 2;
+//      int       payload_length_sum;
+//      uint8_t   name_len;
+//      uint8_t   password_len;
 
 //     payload_length_sum = 0;
 //     // Check BER to be UTF8STRING
