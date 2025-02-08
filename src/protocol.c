@@ -31,7 +31,7 @@ void extract_header(const char *buffer, HeaderData *header)
 
 int is_valid_header(const HeaderData *header)
 {
-    if(is_valid_version(header->protocol_ver) || is_valid_packet_type(header->packet_type))
+    if(is_valid_version(header->protocol_ver) && is_valid_packet_type(header->packet_type))
     {
         return 1;
     }
@@ -132,6 +132,10 @@ payload_fail:
     return ret;
 }
 
+// int send_sys_success(int fd, uint8_t packet_type) {
+//     HeaderData hd;
+// }
+
 void pickle_header(char *arr, const HeaderData *hd)
 {
     const uint16_t host_order_sender_id   = htons(hd->sender_id);
@@ -208,7 +212,7 @@ int handle_fd(int fd, ServerData *server_data)
     }
 
     extract_header(header_buffer, &hd);
-    if(is_valid_header(&hd))
+    if(is_valid_header(&hd) == 0)
     {
         send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);
     }

@@ -19,22 +19,17 @@ int extract_user_pass(char *payload_buffer, char *username, char *password, uint
 
 RequestHandler get_handler_function(uint8_t packet_type)
 {
-    if(packet_type == ACC_LOGIN)
+    switch(packet_type)
     {
-        return handle_login;
+        case ACC_LOGIN:
+            return handle_login;
+        // case ACC_LOGOUT:
+        //     return handle_logout;
+        case ACC_CREATE:
+            return handle_acc_create;
+        default:
+            return NULL;
     }
-    return NULL;
-    // switch(packet_type)
-    // {
-    //     case ACC_LOGIN:
-    //         return handle_login;
-    //     // case ACC_LOGOUT:
-    //     //     return handle_logout;
-    //     // case ACC_CREATE:
-    //     //     return handle_acc_create;
-    //     default:
-    //         return NULL;
-    // }
 }
 
 int handle_login(HandlerArgs *args, int fd)
@@ -54,7 +49,7 @@ int handle_login(HandlerArgs *args, int fd)
         return 0;    // not system error, ok
     }
 
-    printf("%s:%s | remaining bytes: %u\n", username, password, remaining_bytes);    // remove this later;
+    printf("login:%s:%s | remaining bytes: %u\n", username, password, remaining_bytes);    // remove this later;
 
     // call try_login() - this function would do DB calls for the username (key), if nothing returned, or value (password) does not match, error
     // try_login would also be responsible for updating sd->fd_map
@@ -63,7 +58,8 @@ int handle_login(HandlerArgs *args, int fd)
     return ret;
 }
 
-int handle_acc_create(HandlerArgs *args, int fd) {
+int handle_acc_create(HandlerArgs *args, int fd)
+{
     char     username[NAME_BUFFER_SIZE];
     char     password[PASSWORD_BUFFER_SIZE];
     int      ret;
@@ -79,9 +75,9 @@ int handle_acc_create(HandlerArgs *args, int fd) {
         return 0;    // not system error, ok
     }
 
-    printf("%s:%s | remaining bytes: %u\n", username, password, remaining_bytes);    // remove this later;
+    printf("acc create:%s:%s | remaining bytes: %u\n", username, password, remaining_bytes);    // remove this later;
 
-    
+    return ret;
 }
 
 /**
@@ -91,12 +87,12 @@ int extract_user_pass(char *payload_buffer, char *username, char *password, uint
 {
     if(extract_field(&payload_buffer, username, remaining_bytes, P_UTF8STRING))
     {
-        return 1; //bad request
+        return 1;    // bad request
     }
 
     if(extract_field(&payload_buffer, password, remaining_bytes, P_UTF8STRING))
     {
-        return 1; //bad request
+        return 1;    // bad request
     }
     return 0;
 }

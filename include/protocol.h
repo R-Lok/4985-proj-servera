@@ -36,7 +36,7 @@
 // #define P_BOOLEAN 1
 #define P_INTEGER 2
 // #define P_NULL 5
-// #define P_ENUMERATED 10
+#define P_ENUMERATED 10
 #define P_UTF8STRING 12
 
 // #define P_SEQUENCE 16
