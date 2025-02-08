@@ -2,6 +2,7 @@
     "files.associations": {
         "*.ejs": "html",
         "__locale": "c",
-        "request_handlers.h": "c"
+        "request_handlers.h": "c",
+        "string.h": "c"
     }
 }

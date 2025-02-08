@@ -49,11 +49,11 @@ int handle_login(HandlerArgs *args, int fd)
         return 0;    // ok error, client had bad request
     }
 
-    printf("%s:%s\n", username, password); //remove this later;
+    printf("%s:%s\n", username, password);    // remove this later;
 
-    //call try_login() - this function would do DB calls for the username (key), if nothing returned, or value (password) does not match, error
-    //try_login would also be responsible for updating sd->fd_map
-    //if try_login error, send sys_error, else send sys_success
+    // call try_login() - this function would do DB calls for the username (key), if nothing returned, or value (password) does not match, error
+    // try_login would also be responsible for updating sd->fd_map
+    // if try_login error, send sys_error, else send sys_success
 
     return ret;
 }

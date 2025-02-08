@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define DEFAULT_PORT 8000    // default port if no port arg is
 
@@ -49,7 +50,7 @@ int main(int argc, char **argv)
     printf("Server running on port %u...\n", port);
 
     handle_connections(sock_fd, &addr, &running);
-
+    close(sock_fd);
     return EXIT_SUCCESS;
 }
 

@@ -225,13 +225,21 @@ int handle_fd(int fd, ServerData *server_data)
         ret = 1;
         goto end;
     }
-
-    handler           = get_handler_function(hd.packet_type);
+    printf("packet type: %u\n", hd.packet_type);
+    handler = get_handler_function(hd.packet_type);
+    if(handler == NULL)
+    {
+        // fprintf(stdout, "Sending P_BAD_REQUEST - Bad Packet Type\n"); //comment out if not debugging
+        send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);
+        ret = 0;
+        goto bad_req;
+    }
     ha.hd             = &hd;
     ha.payload_buffer = payload_buffer;
     ha.sd             = server_data;
     ret               = handler(&ha, fd);
 
+bad_req:
     free(payload_buffer);
 end:
     return ret;
