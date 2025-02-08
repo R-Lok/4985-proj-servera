@@ -15,6 +15,8 @@ int handle_acc_create(HandlerArgs *args, int fd);
 
 int extract_field(char **payload_ptr, void *buffer, uint16_t *byte_threshold, uint8_t ber_tag);
 
+int extract_user_pass(char *payload_buffer, char *username, char *password, uint16_t *remaining_bytes);
+
 RequestHandler get_handler_function(uint8_t packet_type)
 {
     if(packet_type == ACC_LOGIN)
@@ -46,16 +48,10 @@ int handle_login(HandlerArgs *args, int fd)
 
     ret = 0;
 
-    if(extract_field(&args->payload_buffer, username, &remaining_bytes, P_UTF8STRING))
+    if(extract_user_pass(args->payload_buffer, username, password, &remaining_bytes))
     {
-        send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);    // need error handling
-        return 0;
-    }
-
-    if(extract_field(&args->payload_buffer, password, &remaining_bytes, P_UTF8STRING))
-    {
-        send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);    // need error handling
-        return 0;
+        send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);
+        return 0;    // not system error, ok
     }
 
     printf("%s:%s | remaining bytes: %u\n", username, password, remaining_bytes);    // remove this later;
@@ -65,6 +61,20 @@ int handle_login(HandlerArgs *args, int fd)
     // if try_login error, send sys_error, else send sys_success
 
     return ret;
+}
+
+int extract_user_pass(char *payload_buffer, char *username, char *password, uint16_t *remaining_bytes)
+{
+    if(extract_field(&payload_buffer, username, remaining_bytes, P_UTF8STRING))
+    {
+        return 1; //bad request
+    }
+
+    if(extract_field(&payload_buffer, password, remaining_bytes, P_UTF8STRING))
+    {
+        return 1; //bad request
+    }
+    return 0;
 }
 
 /**
@@ -212,11 +222,6 @@ int extract_field(char **payload_ptr, void *buffer, uint16_t *byte_threshold, ui
 // }
 
 // int handle_logout(ServerData *sd, HeaderData *hd, char *payload_buffer)
-// {
-//     return 0;
-// }
-
-// int handle_acc_create(ServerData *sd, HeaderData *hd, char *payload_buffer)
 // {
 //     return 0;
 // }
