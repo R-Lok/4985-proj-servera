@@ -99,6 +99,7 @@ int extract_field(char *payload_ptr, void *buffer, uint16_t *byte_threshold, uin
     return SUCCESS;
 }
 
+//Below function is obsolete but i will keep it here for now for reference in the future.
 // int extract_login_fields(uint16_t reported_payload_length, char *p_buffer, char *name, char *password)
 // {
 //     const int SUCCESS                 = 0;
