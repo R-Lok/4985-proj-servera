@@ -69,5 +69,6 @@ typedef struct
 } PayloadField;
 
 int handle_fd(int fd, ServerData *server_data);
+int send_sys_error(int fd, uint8_t err_code, const char *err_msg);
 
 #endif

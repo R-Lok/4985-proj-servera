@@ -14,7 +14,7 @@ typedef struct
 } HandlerArgs;
 
 // THIS TYPEDEF WILL GET CHANGED, CURRENTLY CANNOT COVER ALL REQUEST TYPES AS COMPILER CRIES ABOUT WHETHER ServerData * is const or not.
-typedef int (*RequestHandler)(HandlerArgs *);
+typedef int (*RequestHandler)(HandlerArgs *, int);
 
 RequestHandler get_handler_function(uint8_t packet_type);
 
