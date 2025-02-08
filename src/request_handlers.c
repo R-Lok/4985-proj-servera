@@ -67,6 +67,16 @@ int handle_login(HandlerArgs *args, int fd)
     return ret;
 }
 
+/**
+ * This function extracts ONE payload field into the passed in buffer. You need to provide the ber_tag
+ * so that it can check if the ber_tag in the payload is what you expected. The byte_threshold is essentially
+ * how many remaining expected bytes are there (you are making sure the payload doesn't actually have more data than
+ * the header reported). It can also detect if you are trying to read a string and will append the NUL terminator for you
+ * if you provided the P_UTF8STRING ber_tag.
+ *
+ * If you are unsure how to incorporate this into a handle_xxxx function and the setup it requires, read handle_login to get an idea
+ * of what the calling function needs in order to make use of the payload length checking. 
+ */
 int extract_field(char *payload_ptr, void *buffer, uint16_t *byte_threshold, uint8_t ber_tag)
 {
     const int SUCCESS                 = 0;
