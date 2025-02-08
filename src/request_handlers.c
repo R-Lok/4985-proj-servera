@@ -63,6 +63,30 @@ int handle_login(HandlerArgs *args, int fd)
     return ret;
 }
 
+int handle_acc_create(HandlerArgs *args, int fd) {
+    char     username[NAME_BUFFER_SIZE];
+    char     password[PASSWORD_BUFFER_SIZE];
+    int      ret;
+    uint16_t remaining_bytes;
+
+    remaining_bytes = args->hd->payload_len;
+
+    ret = 0;
+
+    if(extract_user_pass(args->payload_buffer, username, password, &remaining_bytes))
+    {
+        send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);
+        return 0;    // not system error, ok
+    }
+
+    printf("%s:%s | remaining bytes: %u\n", username, password, remaining_bytes);    // remove this later;
+
+    
+}
+
+/**
+ * This extracts specifically two fields from the payload: username followed by password (for login/acc create)
+ */
 int extract_user_pass(char *payload_buffer, char *username, char *password, uint16_t *remaining_bytes)
 {
     if(extract_field(&payload_buffer, username, remaining_bytes, P_UTF8STRING))
