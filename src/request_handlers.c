@@ -35,21 +35,26 @@ RequestHandler get_handler_function(uint8_t packet_type)
 
 int handle_login(HandlerArgs *args, int fd)
 {
-    char name[NAME_BUFFER_SIZE];
+    char username[NAME_BUFFER_SIZE];
     char password[PASSWORD_BUFFER_SIZE];
     int  extract_res;
     int  ret;
 
     ret = 0;
 
-    extract_res = extract_login_fields(args->hd->payload_len, args->payload_buffer, name, password);
+    extract_res = extract_login_fields(args->hd->payload_len, args->payload_buffer, username, password);
     if(extract_res == 1 || extract_res == 2)
     {
         send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);
         return 0;    // ok error, client had bad request
     }
 
-    printf("%s:%s\n", name, password);
+    printf("%s:%s\n", username, password); //remove this later;
+
+    //call try_login() - this function would do DB calls for the username (key), if nothing returned, or value (password) does not match, error
+    //try_login would also be responsible for updating sd->fd_map
+    //if try_login error, send sys_error, else send sys_success
+
     return ret;
 }
 
