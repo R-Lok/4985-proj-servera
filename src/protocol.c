@@ -339,3 +339,65 @@ int handle_read_request_res(int res, int fd)
     }
     return 0;
 }
+
+int send_login_success(int fd, uint8_t uid)
+{
+    HeaderData   hd;
+    char        *header;
+    char        *payload;
+    char        *message;
+    int          ret;
+    PayloadField pf;
+
+    ret = 0;
+
+    // Filling in struct data, so we can use it to construct the serialized header array.
+    hd.packet_type  = ACC_LOGIN_SUCCESS;
+    hd.protocol_ver = PROTOCOL_VERSION;
+    hd.sender_id    = SYSTEM_ID;
+    hd.payload_len  = (uint16_t)(sizeof(uid) + ((size_t)EXTRA_BYTES_FOR_BER_AND_LENGTH));
+
+    header = (char *)malloc(HEADER_SIZE);
+    if(header == NULL)
+    {
+        fprintf(stderr, "malloc error\n");
+        return 1;
+    }
+
+    // Use HeaderData struct to fill in the serialized Header array.
+    pickle_header(header, &hd);
+
+    // Fill in the payload fields. SYS error has two fields, so fill in two PayloadField structs. (order matters - has to match protocol)
+    pf.data            = &uid;
+    pf.ber_tag         = P_INTEGER;
+    pf.data_size_bytes = sizeof(uid);
+
+    // Payload here means the body of the request
+    payload = construct_payload(&pf, 1, hd.payload_len);
+    if(payload == NULL)
+    {
+        ret = 1;
+        goto payload_fail;
+    }
+
+    // Message = Header + Payload
+    message = construct_message(header, payload, HEADER_SIZE, hd.payload_len);
+    if(message == NULL)
+    {
+        ret = 1;
+        goto message_fail;
+    }
+
+    if(write_fully(fd, message, (size_t)HEADER_SIZE + hd.payload_len) == WRITE_ERROR)    // need to also handle TIMEOUT (send sys error to indicate timeout)
+    {
+        fprintf(stderr, "Error sending sys error\n");
+        ret = 1;
+    }
+
+    free(message);
+message_fail:
+    free(payload);
+payload_fail:
+    free(header);
+    return ret;
+}

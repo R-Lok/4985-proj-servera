@@ -12,21 +12,21 @@ int store_string(DBM *db, const char *key, const char *value)
     return dbm_store(db, *(datum *)&key_datum, *(datum *)&value_datum, DBM_REPLACE);
 }
 
-int store_uint32(DBM *db, const char *key, uint32_t value)
+int store_uint8(DBM *db, const char *key, uint8_t value)
 {
     const_datum key_datum = MAKE_CONST_DATUM(key);
     datum       value_datum;
     int         result;
 
-    value_datum.dptr = (char *)malloc(TO_SIZE_T(sizeof(uint32_t)));
+    value_datum.dptr = (char *)malloc(TO_SIZE_T(sizeof(uint8_t)));
 
     if(value_datum.dptr == NULL)
     {
         return -1;
     }
 
-    memcpy(value_datum.dptr, &value, sizeof(uint32_t));
-    value_datum.dsize = sizeof(uint32_t);
+    memcpy(value_datum.dptr, &value, sizeof(uint8_t));
+    value_datum.dsize = sizeof(uint8_t);
 
     result = dbm_store(db, *(datum *)&key_datum, value_datum, DBM_REPLACE);
 
@@ -66,7 +66,7 @@ char *retrieve_string(DBM *db, const char *key)
 }
 
 // **Function to retrieve an integer**
-int retrieve_uint32(DBM *db, const char *key, uint32_t *result)
+int retrieve_uint8(DBM *db, const char *key, uint8_t *result)
 {
     datum       fetched;
     const_datum key_datum = MAKE_CONST_DATUM(key);
@@ -76,12 +76,12 @@ int retrieve_uint32(DBM *db, const char *key, uint32_t *result)
     fetched = dbm_fetch(db, *(datum *)&key_datum);
 #pragma GCC diagnostic pop
 
-    if(fetched.dptr == NULL || fetched.dsize != sizeof(uint32_t))
+    if(fetched.dptr == NULL || fetched.dsize != sizeof(uint8_t))
     {
         return -1;
     }
 
-    memcpy(result, fetched.dptr, sizeof(uint32_t));
+    memcpy(result, fetched.dptr, sizeof(uint8_t));
 
     return 0;
 }
