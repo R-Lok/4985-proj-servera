@@ -68,6 +68,7 @@ int handle_login(HandlerArgs *args, int fd)
     else
     {
         printf("invalid auth\n");    // send sys_error
+        send_sys_error(fd, P_INVALID_AUTH_INFO, P_INVALID_AUTH_INFO_MSG);
     }
 
     return ret;

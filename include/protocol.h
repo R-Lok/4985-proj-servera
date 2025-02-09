@@ -22,12 +22,13 @@
 
 /*Server-Client Error codes*/
 // #define P_INVALID_USER_ID 11
-// #define P_INVALID_AUTH_INFO 12
+#define P_INVALID_AUTH_INFO 12
 #define P_USER_EXISTS 13       // If signing up with taken name
 #define P_SERVER_FAILURE 21    // if server has error and cannot fulfill the request
 #define P_BAD_REQUEST 31
 #define P_TIMEOUT 32
 
+#define P_INVALID_AUTH_INFO_MSG "Invalid Authentication Information"
 #define P_USER_EXISTS_MSG "Username Already Taken"
 #define P_BAD_REQUEST_MSG "Bad Request"
 #define P_TIMEOUT_MSG "Request Timed"
