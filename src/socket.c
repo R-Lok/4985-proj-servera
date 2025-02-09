@@ -180,8 +180,8 @@ static void handle_disconnect_events(ServerData *sd)
 {
     for(nfds_t i = 0; i < sd->num_clients; i++)
     {
-        // Check if POLLERR or POLLHUP occurred
-        if(sd->clients[i].revents & POLLERR || sd->clients[i].revents & POLLHUP)
+        // Check if POLLERR or POLLHUP occurred OR the file descriptor was closed somewhere deeper in the program.
+        if(sd->clients[i].revents & POLLERR || sd->clients[i].revents & POLLHUP || sd->clients[i].revents & POLLNVAL)
         {
             const int fd = sd->clients[i].fd;
             printf("Error/Hangup occurred on fd %d\n - removing client..\n", sd->clients[i].fd);
@@ -217,7 +217,7 @@ static int handle_new_client(int client_fd, ServerData *sd)
         return 1;
     }
     sd->clients[sd->num_clients].fd     = client_fd;
-    sd->clients[sd->num_clients].events = POLLIN | POLLERR | POLLHUP;    // set to listen to POLLIN(data in socket) and hangup/disconnect
+    sd->clients[sd->num_clients].events = POLLIN | POLLERR | POLLHUP || POLLNVAL;    // set to listen to POLLIN(data in socket) and hangup/disconnect
     sd->num_clients++;                                                   // increment num of clients
     return 0;
 }
