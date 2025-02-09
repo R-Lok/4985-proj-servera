@@ -16,7 +16,11 @@ int handle_acc_create(HandlerArgs *args, int fd);
 
 int extract_field(char **payload_ptr, void *buffer, uint16_t *byte_threshold, uint8_t ber_tag);
 
-int extract_user_pass(char *payload_buffer, char *username, char *password, uint16_t *remaining_bytes);
+int      extract_user_pass(char *payload_buffer, char *username, char *password, uint16_t *remaining_bytes);
+int      try_acc_create(DBM *user_db, DBM *metadata_db, const char *username, const char *password);
+int      check_user_exists(DBM *user_db, const char *username);
+uint32_t increment_uid(DBM *metadata_db);
+int      insert_new_user(DBM *user_db, const char *username, const char *password, uint32_t uid);
 
 RequestHandler get_handler_function(uint8_t packet_type)
 {
@@ -169,6 +173,110 @@ int extract_field(char **payload_ptr, void *buffer, uint16_t *byte_threshold, ui
     *byte_threshold = (uint16_t)(*byte_threshold - data_len - 2);
 
     return SUCCESS;
+}
+
+int try_acc_create(DBM *user_db, DBM *metadata_db, const char *username, const char *password)
+{
+    const int USERNAME_TAKEN = 1;
+    const int DB_ERROR       = 2;
+
+    int      user_exists_res;
+    uint32_t uid;
+
+    user_exists_res = check_user_exists(user_db, username);
+    if(user_exists_res == 1)
+    {
+        return USERNAME_TAKEN;
+    }
+
+    uid = increment_uid(metadata_db);
+    if(uid == 0)
+    {
+        return DB_ERROR;
+    }
+
+    if(insert_new_user(user_db, username, password, uid))
+    {
+        return DB_ERROR;
+    }
+
+    return 0;
+}
+
+int check_user_exists(DBM *user_db, const char *username)
+{
+    const int   USER_EXISTS    = 1;
+    const int   USER_NOT_EXIST = 0;
+    const_datum key_datum;
+    datum       result;
+
+    key_datum = MAKE_CONST_DATUM(username);
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waggregate-return"
+    result = dbm_fetch(user_db, *(datum *)&key_datum);
+#pragma GCC diagnostic pop
+
+    if(result.dptr == NULL)
+    {
+        return USER_NOT_EXIST;
+    }
+    return USER_EXISTS;
+}
+
+uint32_t increment_uid(DBM *metadata_db)
+{
+    const uint32_t FIRST_UID = 1;
+    const uint32_t ERROR     = 0;
+    const char    *key       = "numusers";
+    uint32_t       uid;
+
+    if(retrieve_uint32(metadata_db, key, &uid) == -1)
+    {    // no previous "numusers" entry
+        if(store_uint32(metadata_db, key, FIRST_UID) == -1)
+        {                    // set numusers to 1
+            return ERROR;    // if storing has error
+        }
+        return FIRST_UID;    // return 1, first user to register
+    }
+
+    uid++;    // increment the retrieved number
+
+    if(store_uint32(metadata_db, key, uid) == -1)
+    {                    // store incremented number
+        return ERROR;    // if storing has error
+    }
+    return uid;    // returned the incremented uid to assign to the user
+}
+
+int insert_new_user(DBM *user_db, const char *username, const char *password, uint32_t uid)
+{
+    char       *serialized_data;
+    char       *shift_ptr;
+    int         result;
+    const_datum key;
+    datum       value;
+
+    serialized_data = (char *)malloc((strlen(password) + 1) + sizeof(uint32_t));
+    if(serialized_data == NULL)
+    {
+        return -1;    // malloc error;
+    }
+    shift_ptr = serialized_data;
+
+    memcpy(shift_ptr, &uid, sizeof(uid));                 // serialize uid into the array
+    shift_ptr += sizeof(uid);                             // shift ptr to empty byte
+    memcpy(shift_ptr, password, strlen(password) + 1);    // serialize password + NUL terminator
+
+    key.dptr    = username;
+    key.dsize   = strlen(username) + 1;    // include nul terminator
+    value.dptr  = serialized_data;
+    value.dsize = sizeof(uid) + strlen(password) + 1;
+
+    free(serialized_data);
+    result = dbm_store(user_db, *(datum *)&key, value, DBM_INSERT);
+
+    return result;
 }
 
 // Below function is obsolete but i will keep it here for now for reference in the future.
