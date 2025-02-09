@@ -99,7 +99,7 @@ int handle_logout(HandlerArgs *args, int fd)
         //set uid of that position in the map as 0
         args->sd->fd_map[fd].uid = 0;
         //Close the file descriptor as they have logged out
-        close(fd);
+        close(fd); //consider if this needs further error handling.
     }
     return 0;
 }
