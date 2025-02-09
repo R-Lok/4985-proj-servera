@@ -273,9 +273,8 @@ int insert_new_user(DBM *user_db, const char *username, const char *password, ui
     value.dptr  = serialized_data;
     value.dsize = sizeof(uid) + strlen(password) + 1;
 
-    free(serialized_data);
     result = dbm_store(user_db, *(datum *)&key, value, DBM_INSERT);
-
+    free(serialized_data);
     return result;
 }
 

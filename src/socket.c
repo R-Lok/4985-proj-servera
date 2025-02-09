@@ -171,6 +171,9 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig
     }
     free(sd.clients);
     free(sd.fd_map);
+    dbm_close(sd.user_db);
+    dbm_close(sd.metadata_db);
+    printf("Exiting handle_connections..\n");    // debug statement, comment out at end of project.
     return ret;
 }
 
