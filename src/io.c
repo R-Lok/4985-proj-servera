@@ -5,9 +5,9 @@
 #include <time.h>
 #include <unistd.h>
 
-#define TIMEOUT_DURATION                                                                                                                                                                                                                                           \
-    100    // ms, can lower. Timeout exists cause imagine: client states their payload is 20 bytes in header, but actually
-           // 18 bytes. We would get stuck on read forever if we do not time out their request.
+// in ms, can lower. Timeout exists cause imagine: client states their payload is 20 bytes in header, but actually
+// 18 bytes. We would get stuck on read forever if we do not time out their request.
+#define TIMEOUT_DURATION 100
 #define MS_PER_SECOND 1000
 
 int read_fully(int fd, char *buffer, size_t bytes_to_read)
