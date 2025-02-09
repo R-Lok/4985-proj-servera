@@ -86,6 +86,25 @@ int handle_acc_create(HandlerArgs *args, int fd)
 }
 
 /**
+ * Issue with handling logouts is that the main poll loop is already polling for disconnect events, the fd might be cleaned up
+ * before this request is even read. I'll think about it more in milestone 2. There should be no major issues even with the current
+ * design apart from maybe the fd_map position not being cleaned to NUL and 0.
+ */
+int handle_logout(HandlerArgs *args, int fd)
+{
+    //Check sender id matches the actual id stored in the fd_map
+    if(args->hd->sender_id == args->sd->fd_map[fd].uid) {
+        //set name to all NUL chars
+        memset(args->sd->fd_map[fd].username, 0, sizeof(args->sd->fd_map[fd].username));
+        //set uid of that position in the map as 0
+        args->sd->fd_map[fd].uid = 0;
+        //Close the file descriptor as they have logged out
+        close(fd);
+    }
+    return 0;
+}
+
+/**
  * This extracts specifically two fields from the payload: username followed by password (for login/acc create)
  */
 int extract_user_pass(char *payload_buffer, char *username, char *password, uint16_t *remaining_bytes)
@@ -246,7 +265,3 @@ int extract_field(char **payload_ptr, void *buffer, uint16_t *byte_threshold, ui
 //     return ret;
 // }
 
-// int handle_logout(ServerData *sd, HeaderData *hd, char *payload_buffer)
-// {
-//     return 0;
-// }
