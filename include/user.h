@@ -5,7 +5,7 @@
 #include <poll.h>
 #include <pthread.h>
 
-#define MAX_USERNAME_LENGTH 33    // including \0 terminator
+#define MAX_USERNAME_LENGTH 255    // including \0 terminator
 
 typedef struct    // This struct is the elements of the fd_map in ServerData. Each holds a user's name and uid AFTER they logged in.
 {

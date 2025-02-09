@@ -21,6 +21,7 @@ int      try_acc_create(DBM *user_db, DBM *metadata_db, const char *username, co
 int      check_user_exists(DBM *user_db, const char *username);
 uint32_t increment_uid(DBM *metadata_db);
 int      insert_new_user(DBM *user_db, const char *username, const char *password, uint32_t uid);
+int      try_login(DBM *user_db, SessionUser *fd_map, int fd, const char *username, const char *password);
 
 RequestHandler get_handler_function(uint8_t packet_type)
 {
@@ -59,6 +60,14 @@ int handle_login(HandlerArgs *args, int fd)
     // call try_login() - this function would do DB calls for the username (key), if nothing returned, or value (password) does not match, error
     // try_login would also be responsible for updating sd->fd_map
     // if try_login error, send sys_error, else send sys_success
+    if(try_login(args->sd->user_db, args->sd->fd_map, fd, username, password) == 0)
+    {
+        printf("Login success: %s | session info: %s:%u\n", username, args->sd->fd_map[fd].username, args->sd->fd_map[fd].uid);    // send LOGIN SUCCESS packet
+    }
+    else
+    {
+        printf("invalid auth\n");    // send sys_error
+    }
 
     return ret;
 }
@@ -285,6 +294,39 @@ int insert_new_user(DBM *user_db, const char *username, const char *password, ui
     result = dbm_store(user_db, *(datum *)&key, value, DBM_INSERT);
     free(serialized_data);
     return result;
+}
+
+int try_login(DBM *user_db, SessionUser *fd_map, int fd, const char *username, const char *password)
+{
+    const int INVALID_AUTH = 1;
+    // const int SERVER_ERROR = 2;
+    char     retrieved_pass[PASSWORD_BUFFER_SIZE + 1];
+    uint32_t retrieved_uid;
+    datum    result;
+
+    const_datum key;
+
+    key = MAKE_CONST_DATUM(username);
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waggregate-return"
+    result = dbm_fetch(user_db, *(datum *)&key);
+#pragma GCC diagnostic pop
+
+    if(result.dptr == NULL)
+    {
+        return INVALID_AUTH;    // user doesnt exist
+    }
+    memcpy(&retrieved_uid, result.dptr, sizeof(retrieved_uid));
+    strlcpy(retrieved_pass, (char *)result.dptr + sizeof(retrieved_uid), result.dsize - sizeof(retrieved_uid));
+
+    if(strcmp(password, retrieved_pass) != 0)
+    {
+        return INVALID_AUTH;    // wrong password
+    }
+    strlcpy(fd_map[fd].username, username, sizeof(fd_map[fd].username));
+    fd_map[fd].uid = retrieved_uid;
+    return 0;
 }
 
 // Below function is obsolete but i will keep it here for now for reference in the future.
