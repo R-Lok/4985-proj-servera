@@ -93,7 +93,7 @@ int handle_acc_create(HandlerArgs *args, int fd)
 int handle_logout(HandlerArgs *args, int fd)
 {
     //Check sender id matches the actual id stored in the fd_map
-    if(args->hd->sender_id == args->sd->fd_map[fd].uid) {
+    if(args->hd->sender_id == args->sd->fd_map[fd].uid) { //consider adding some kind of handling if it doesnt match?
         //set name to all NUL chars
         memset(args->sd->fd_map[fd].username, 0, sizeof(args->sd->fd_map[fd].username));
         //set uid of that position in the map as 0
@@ -128,8 +128,8 @@ int extract_user_pass(char *payload_buffer, char *username, char *password, uint
  * the header reported). It can also detect if you are trying to read a string and will append the NUL terminator for you
  * if you provided the P_UTF8STRING ber_tag.
  *
- * If you are unsure how to incorporate this into a handle_xxxx function and the setup it requires, read handle_login to get an idea
- * of what the calling function needs in order to make use of the payload length checking.
+ * If you are unsure how to incorporate this into a handle_xxxx function and the setup it requires, read handle_login/extract_user_pass 
+ * functions to get an idea of what the calling function needs in order to make use of the payload length checking.
  */
 int extract_field(char **payload_ptr, void *buffer, uint16_t *byte_threshold, uint8_t ber_tag)
 {
