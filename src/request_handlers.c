@@ -29,9 +29,10 @@ RequestHandler get_handler_function(uint8_t packet_type)
     {
         case ACC_LOGIN:
             return handle_login;
-        // case ACC_LOGOUT:
-        //     return handle_logout;
+        case ACC_LOGOUT:
+            return handle_logout;
         case ACC_CREATE:
+            printf("selecting handle_acc_create\n");
             return handle_acc_create;
         default:
             return NULL;
