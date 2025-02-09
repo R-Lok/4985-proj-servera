@@ -86,6 +86,14 @@ int handle_acc_create(HandlerArgs *args, int fd)
     // also consider empty passwords (nothing - maybe store password as just 1 NUL byte? or maybe return error? not sure - will have to discuss with clients)
     // if ok to create that account, create the account and return 0 (success)
     // send sys_success on successful creation, sys_error on failure (username already taken)
+    if(try_acc_create(args->sd->user_db, args->sd->metadata_db, username, password))
+    {
+        send_sys_success(fd, ACC_CREATE);    // needs error handling
+    }
+    else
+    {
+        send_sys_error(fd, P_USER_EXISTS, P_USER_EXISTS_MSG);    // needs error handling
+    }
 
     return ret;
 }
