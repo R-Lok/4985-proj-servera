@@ -1,3 +1,4 @@
+#include "../include/db.h"
 #include "../include/protocol.h"
 #include "../include/user.h"
 #include <../include/socket.h>
@@ -92,6 +93,15 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig
 
     sd.num_clients = 0;
     ret            = EXIT_SUCCESS;
+
+    sd.user_db     = dbm_open("user_db", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    sd.metadata_db = dbm_open("metadata_db", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+    if(sd.metadata_db == NULL || sd.user_db == NULL)
+    {
+        fprintf(stderr, "Failed to open one or both dbs\n");
+        return 1;
+    }
 
     sd.clients = (struct pollfd *)calloc(MAX_CONNECTED_CLIENTS, sizeof(struct pollfd));
     if(sd.clients == NULL)
@@ -217,7 +227,7 @@ static int handle_new_client(int client_fd, ServerData *sd)
         return 1;
     }
     sd->clients[sd->num_clients].fd     = client_fd;
-    sd->clients[sd->num_clients].events = POLLIN | POLLERR | POLLHUP || POLLNVAL;    // set to listen to POLLIN(data in socket) and hangup/disconnect
-    sd->num_clients++;                                                   // increment num of clients
+    sd->clients[sd->num_clients].events = POLLIN | POLLERR | POLLHUP | POLLNVAL;    // set to listen to POLLIN(data in socket) and hangup/disconnect
+    sd->num_clients++;                                                              // increment num of clients
     return 0;
 }

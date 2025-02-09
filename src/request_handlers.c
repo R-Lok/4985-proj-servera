@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define NAME_BUFFER_SIZE 256
 #define PASSWORD_BUFFER_SIZE 256
@@ -77,10 +78,10 @@ int handle_acc_create(HandlerArgs *args, int fd)
 
     printf("acc create:%s:%s | remaining bytes: %u\n", username, password, remaining_bytes);    // remove this later;
 
-    //call try_acc_create() -> first check if key (username) already exists, if it does, return some err number, 
-    //also consider empty passwords (nothing - maybe store password as just 1 NUL byte? or maybe return error? not sure - will have to discuss with clients)
-    //if ok to create that account, create the account and return 0 (success)
-    //send sys_success on successful creation, sys_error on failure (username already taken)
+    // call try_acc_create() -> first check if key (username) already exists, if it does, return some err number,
+    // also consider empty passwords (nothing - maybe store password as just 1 NUL byte? or maybe return error? not sure - will have to discuss with clients)
+    // if ok to create that account, create the account and return 0 (success)
+    // send sys_success on successful creation, sys_error on failure (username already taken)
 
     return ret;
 }
@@ -92,14 +93,15 @@ int handle_acc_create(HandlerArgs *args, int fd)
  */
 int handle_logout(HandlerArgs *args, int fd)
 {
-    //Check sender id matches the actual id stored in the fd_map
-    if(args->hd->sender_id == args->sd->fd_map[fd].uid) { //consider adding some kind of handling if it doesnt match?
-        //set name to all NUL chars
+    // Check sender id matches the actual id stored in the fd_map
+    if(args->hd->sender_id == args->sd->fd_map[fd].uid)
+    {    // consider adding some kind of handling if it doesnt match?
+        // set name to all NUL chars
         memset(args->sd->fd_map[fd].username, 0, sizeof(args->sd->fd_map[fd].username));
-        //set uid of that position in the map as 0
+        // set uid of that position in the map as 0
         args->sd->fd_map[fd].uid = 0;
-        //Close the file descriptor as they have logged out
-        close(fd); //consider if this needs further error handling.
+        // Close the file descriptor as they have logged out
+        close(fd);    // consider if this needs further error handling.
     }
     return 0;
 }
@@ -128,7 +130,7 @@ int extract_user_pass(char *payload_buffer, char *username, char *password, uint
  * the header reported). It can also detect if you are trying to read a string and will append the NUL terminator for you
  * if you provided the P_UTF8STRING ber_tag.
  *
- * If you are unsure how to incorporate this into a handle_xxxx function and the setup it requires, read handle_login/extract_user_pass 
+ * If you are unsure how to incorporate this into a handle_xxxx function and the setup it requires, read handle_login/extract_user_pass
  * functions to get an idea of what the calling function needs in order to make use of the payload length checking.
  */
 int extract_field(char **payload_ptr, void *buffer, uint16_t *byte_threshold, uint8_t ber_tag)
@@ -264,4 +266,3 @@ int extract_field(char **payload_ptr, void *buffer, uint16_t *byte_threshold, ui
 // name_fail:
 //     return ret;
 // }
-

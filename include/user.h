@@ -1,5 +1,6 @@
 #ifndef USER_H
 #define USER_H
+#include "../include/db.h"
 #include <inttypes.h>
 #include <poll.h>
 #include <pthread.h>
@@ -23,6 +24,10 @@ typedef struct
                             // a specific username and uid.
     // cppcheck-suppress unusedStructMember
     nfds_t num_clients;    // Just tracking the number of connected clients (don't have to be logged in)
+    // cppcheck-suppress unusedStructMember
+    DBM *user_db;
+    // cppcheck-suppress unusedStructMember
+    DBM *metadata_db;
 
 } ServerData;
 
