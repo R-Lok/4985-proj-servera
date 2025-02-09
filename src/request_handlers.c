@@ -77,6 +77,11 @@ int handle_acc_create(HandlerArgs *args, int fd)
 
     printf("acc create:%s:%s | remaining bytes: %u\n", username, password, remaining_bytes);    // remove this later;
 
+    //call try_acc_create() -> first check if key (username) already exists, if it does, return some err number, 
+    //also consider empty passwords (nothing - maybe store password as just 1 NUL byte? or maybe return error? not sure - will have to discuss with clients)
+    //if ok to create that account, create the account and return 0 (success)
+    //send sys_success on successful creation, sys_error on failure (username already taken)
+
     return ret;
 }
 
