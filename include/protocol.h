@@ -13,7 +13,7 @@
 #define HEADER_SIZE 6
 
 /*Client and Server Packet types*/
-// #define SYS_SUCCESS 0
+#define SYS_SUCCESS 0
 #define SYS_ERROR 1
 #define ACC_LOGIN 10    // User request to log in
 // #define ACC_LOGIN_SUCCESS 11 //System response that log in was successful
@@ -70,5 +70,6 @@ typedef struct
 
 int handle_fd(int fd, ServerData *server_data);
 int send_sys_error(int fd, uint8_t err_code, const char *err_msg);
+int send_sys_success(int fd, uint8_t packet_type);
 
 #endif

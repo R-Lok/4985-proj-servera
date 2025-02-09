@@ -132,9 +132,70 @@ payload_fail:
     return ret;
 }
 
-// int send_sys_success(int fd, uint8_t packet_type) {
-//     HeaderData hd;
-// }
+/**
+ * packet_type here means what kind of packet this sys_success is responding to (confirming the success of)
+ */
+int send_sys_success(int fd, uint8_t packet_type)
+{
+    HeaderData   hd;
+    char        *header;
+    char        *payload;
+    char        *message;
+    int          ret;
+    PayloadField pf;
+
+    ret = 0;
+
+    // Filling in struct data, so we can use it to construct the serialized header array.
+    hd.packet_type  = SYS_SUCCESS;
+    hd.protocol_ver = PROTOCOL_VERSION;
+    hd.sender_id    = SYSTEM_ID;
+    hd.payload_len  = (uint16_t)(sizeof(packet_type) + ((size_t)EXTRA_BYTES_FOR_BER_AND_LENGTH));
+
+    header = (char *)malloc(HEADER_SIZE);
+    if(header == NULL)
+    {
+        fprintf(stderr, "malloc error\n");
+        return 1;
+    }
+
+    // Use HeaderData struct to fill in the serialized Header array.
+    pickle_header(header, &hd);
+
+    // Fill in the payload fields. SYS error has two fields, so fill in two PayloadField structs. (order matters - has to match protocol)
+    pf.data            = &packet_type;
+    pf.ber_tag         = P_ENUMERATED;
+    pf.data_size_bytes = sizeof(packet_type);
+
+    // Payload here means the body of the request
+    payload = construct_payload(&pf, 1, hd.payload_len);
+    if(payload == NULL)
+    {
+        ret = 1;
+        goto payload_fail;
+    }
+
+    // Message = Header + Payload
+    message = construct_message(header, payload, HEADER_SIZE, hd.payload_len);
+    if(message == NULL)
+    {
+        ret = 1;
+        goto message_fail;
+    }
+
+    if(write_fully(fd, message, (size_t)HEADER_SIZE + hd.payload_len) == WRITE_ERROR)    // need to also handle TIMEOUT (send sys error to indicate timeout)
+    {
+        fprintf(stderr, "Error sending sys error\n");
+        ret = 1;
+    }
+
+    free(message);
+message_fail:
+    free(payload);
+payload_fail:
+    free(header);
+    return ret;
+}
 
 void pickle_header(char *arr, const HeaderData *hd)
 {
