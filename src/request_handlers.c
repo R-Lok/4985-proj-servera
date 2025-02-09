@@ -112,6 +112,7 @@ int handle_logout(HandlerArgs *args, int fd)
 
 /**
  * This extracts specifically two fields from the payload: username followed by password (for login/acc create)
+ * NEEDS ERROR HANDLING FOR EMPTY PASSWORD MAYBE? - Will need to discuss with client groups perhaps - how would they even send an "empty" password?
  */
 int extract_user_pass(char *payload_buffer, char *username, char *password, uint16_t *remaining_bytes)
 {
