@@ -1,5 +1,7 @@
 #include "../include/args.h"
+#include "../include/server_manager.h"
 #include "../include/socket.h"
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,6 +20,7 @@ int main(int argc, char **argv)
     struct sockaddr_in addr;
     int                err;
     int                sock_fd;
+    int                sm_fd;
 
     port = DEFAULT_PORT;
     signal(SIGINT, handle_signal);
@@ -48,6 +51,23 @@ int main(int argc, char **argv)
     }
 
     printf("Server running on port %u...\n", port);
+
+    // Attempt to connect to server manager
+    sm_fd = -1;
+    if(server_manager_connect(&sm_fd) == 0)
+    {
+        printf("Connected to server manager");
+
+        // Send user count
+        send_user_count(sm_fd, 0);    // Send zero for now
+
+        // Close connection once done
+        server_manager_disconnect(sm_fd);
+    }
+    else
+    {
+        printf("No server manager connection detected");
+    }
 
     handle_connections(sock_fd, &addr, &running);
     close(sock_fd);
