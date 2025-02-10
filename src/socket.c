@@ -21,9 +21,9 @@ static int  handle_new_client(int client_fd, ServerData *sd);
 static void handle_disconnect_events(ServerData *sd);
 static int  handle_pollins(ServerData *sd);
 
-int setup_addr(struct sockaddr_in *my_addr, in_port_t port, int *err)
+int setup_addr(const char *ipv4, struct sockaddr_in *my_addr, in_port_t port, int *err)
 {
-    const char *addr = "0.0.0.0";    // Listen to all incoming connections on all availalbe network interfaces
+    const char *addr = ipv4;    // Listen to all incoming connections on all availalbe network interfaces
 
     memset(my_addr, 0, sizeof(struct sockaddr_in));
 

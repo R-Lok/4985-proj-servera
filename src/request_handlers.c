@@ -293,9 +293,9 @@ int insert_new_user(DBM *user_db, const char *username, const char *password, ui
     memcpy(shift_ptr, password, strlen(password) + 1);    // serialize password + NUL terminator
 
     key.dptr    = username;
-    key.dsize   = (int)(strlen(username) + 1);    // include nul terminator
+    key.dsize   = (strlen(username) + 1);    // include nul terminator
     value.dptr  = serialized_data;
-    value.dsize = (int)(sizeof(uid) + strlen(password) + 1);
+    value.dsize = sizeof(uid) + strlen(password) + 1;
 
     result = dbm_store(user_db, *(datum *)&key, value, DBM_INSERT);
     free(serialized_data);
@@ -324,7 +324,7 @@ int try_login(DBM *user_db, SessionUser *fd_map, int fd, const char *username, c
         return INVALID_AUTH;    // user doesnt exist
     }
     memcpy(&retrieved_uid, result.dptr, sizeof(retrieved_uid));
-    strlcpy(retrieved_pass, result.dptr + sizeof(retrieved_uid), (size_t)result.dsize - sizeof(retrieved_uid));
+    strlcpy(retrieved_pass, (char *)result.dptr + sizeof(retrieved_uid), (size_t)result.dsize - sizeof(retrieved_uid));
 
     if(strcmp(password, retrieved_pass) != 0)
     {

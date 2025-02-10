@@ -30,7 +30,7 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    if(setup_addr(&addr, port, &err))    // set up address structs for socket setup
+    if(setup_addr("0.0.0.0", &addr, port, &err))    // set up address structs for socket setup
     {
         fprintf(stderr, "Error setting up sockaddr_in %s", strerror(err));
         exit(EXIT_FAILURE);
@@ -53,8 +53,9 @@ int main(int argc, char **argv)
     printf("Server running on port %u...\n", port);
 
     // Attempt to connect to server manager
-    sm_fd = -1;
-    if(server_manager_connect(&sm_fd) == 0)
+
+    sm_fd = server_manager_connect();
+    if(sm_fd != -1)
     {
         printf("Connected to server manager");
 
@@ -70,6 +71,10 @@ int main(int argc, char **argv)
     }
 
     handle_connections(sock_fd, &addr, &running);
+    if(sm_fd != -1)
+    {
+        close(sm_fd);
+    }
     close(sock_fd);
     return EXIT_SUCCESS;
 }

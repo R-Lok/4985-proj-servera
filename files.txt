@@ -1,1 +1,1 @@
-main src/main.c src/args.c include/args.h src/socket.c include/socket.h include/user.h src/user.c src/protocol.c include/protocol.h src/io.c include/io.h src/request_handlers.c include/request_handlers.h src/db.c include/db.h src/server_manager.c include/server_manager.h gdbm_compat
+main src/main.c src/args.c include/args.h src/socket.c include/socket.h include/user.h src/user.c src/protocol.c include/protocol.h src/io.c include/io.h src/request_handlers.c include/request_handlers.h src/db.c include/db.h src/server_manager.c include/server_manager.h
