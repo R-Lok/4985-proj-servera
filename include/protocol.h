@@ -48,6 +48,12 @@
 
 #define PAYLOAD_READ_BUF_SIZE 1024
 
+// Packet types for Server-Manager
+#define USR_COUNT 10
+
+// #define MAN_Sucess 0
+// #define MAN_Error 1
+
 typedef struct
 {
     // cppcheck-suppress unusedStructMember
@@ -70,9 +76,12 @@ typedef struct
     void *data;
 } PayloadField;
 
-int handle_fd(int fd, ServerData *server_data);
-int send_sys_error(int fd, uint8_t err_code, const char *err_msg);
-int send_sys_success(int fd, uint8_t packet_type);
-int send_login_success(int fd, uint8_t uid);
+int   handle_fd(int fd, ServerData *server_data);
+int   send_sys_error(int fd, uint8_t err_code, const char *err_msg);
+int   send_sys_success(int fd, uint8_t packet_type);
+int   send_login_success(int fd, uint8_t uid);
+void  pickle_header(char *arr, const HeaderData *hd);
+char *construct_payload(PayloadField *payload_fields, size_t num_fields, size_t payload_len);
+char *construct_message(const char *header, const char *payload, size_t header_len, size_t payload_len);
 
 #endif

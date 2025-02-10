@@ -7,13 +7,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-void  extract_header(const char *buffer, HeaderData *header);
-int   is_valid_header(const HeaderData *header);
-int   is_valid_version(uint8_t protocol_ver);
-int   is_valid_packet_type(uint8_t packet_type);
-void  pickle_header(char *arr, const HeaderData *hd);
-char *construct_payload(PayloadField *payload_fields, size_t num_fields, size_t payload_len);
-char *construct_message(const char *header, const char *payload, size_t header_len, size_t payload_len);
+void extract_header(const char *buffer, HeaderData *header);
+int  is_valid_header(const HeaderData *header);
+int  is_valid_version(uint8_t protocol_ver);
+int  is_valid_packet_type(uint8_t packet_type);
+
 char *malloc_payload_buffer(uint16_t payload_len);
 int   handle_read_request_res(int res, int fd);
 
