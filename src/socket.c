@@ -14,6 +14,7 @@
 #define MAX_PENDING_CONNECTIONS 10    // max backlogged connections
 #define MAX_CONNECTED_CLIENTS 1024    // max number of connected clients (can change to dynamic resize later if required)
 #define POLL_TIMEOUT 500              // time to wait for each poll call
+#define DB_BUFFER 16                  // buffer for db names in char arrays
 
 static void remove_pollfd(struct pollfd *clients, nfds_t index, nfds_t num_clients);
 static int  handle_new_client(int client_fd, ServerData *sd);
@@ -90,12 +91,17 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig
 {
     int        ret;
     ServerData sd;
+    char       user_db_filename[DB_BUFFER];
+    char       metadata_db_filename[DB_BUFFER];
+
+    strcpy(user_db_filename, "user_db");
+    strcpy(metadata_db_filename, "metadata_db");
 
     sd.num_clients = 0;
     ret            = EXIT_SUCCESS;
 
-    sd.user_db     = dbm_open("user_db", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-    sd.metadata_db = dbm_open("metadata_db", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    sd.user_db     = dbm_open(user_db_filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    sd.metadata_db = dbm_open(metadata_db_filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
     if(sd.metadata_db == NULL || sd.user_db == NULL)
     {
@@ -171,6 +177,7 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig
     }
     free(sd.clients);
     free(sd.fd_map);
+
     dbm_close(sd.user_db);
     dbm_close(sd.metadata_db);
     printf("Exiting handle_connections..\n");    // debug statement, comment out at end of project.
