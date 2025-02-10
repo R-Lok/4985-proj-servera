@@ -55,6 +55,7 @@ int send_user_count(int sock_fd, uint16_t user_count)
     char               *payload;
     char               *message;
     int                 ret;
+    uint16_t user_count_network_order;
     PayloadField        pf;
 
     ret = 0;
@@ -75,8 +76,9 @@ int send_user_count(int sock_fd, uint16_t user_count)
     // Encode header
     pickle_server_manager_header(header, &smh);
 
+    user_count_network_order = htons(user_count);
     // Fill payload
-    pf.data            = &user_count;
+    pf.data            = &user_count_network_order;
     pf.ber_tag         = P_INTEGER;
     pf.data_size_bytes = sizeof(user_count);
 
