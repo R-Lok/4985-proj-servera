@@ -14,7 +14,7 @@ int server_manager_connect(void)
 {
     struct sockaddr_in server_manager_addr;
     int                err;
-    const char        *sm_ipv4 = "127.0.0.1";    // change depending on sm ipv4 address
+    const char        *sm_ipv4 = "192.168.0.66";    // change depending on sm ipv4 address
     int                sock_fd;
 
     // Function from socket.h to set up sm address
