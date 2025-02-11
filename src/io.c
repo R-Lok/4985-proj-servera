@@ -27,7 +27,7 @@ int read_fully(int fd, char *buffer, size_t bytes_to_read)
         elapsed_time_ms = (double)(current_tick - start_tick) * MS_PER_SECOND / CLOCKS_PER_SEC;
         if(elapsed_time_ms > TIMEOUT_DURATION)    // If beyond timeout, then return TIMEOUT.
         {
-            printf("Timed Out\n");
+            printf("Timed Out fd:%d\n", fd);
             return TIMEOUT;
         }
         nread = read(fd, buffer + tread, bytes_to_read - tread);
@@ -41,8 +41,9 @@ int read_fully(int fd, char *buffer, size_t bytes_to_read)
             return READ_ERROR;
         }
 
-        if(nread == 0 && bytes_to_read != tread)    // If we read EOF even though we expected to read more bytes.
+        if(nread == 0)    // If we read EOF even though we expected to read more bytes.
         {
+            // printf("cd\n");
             return CLIENT_DISCONNECTED;
         }
 

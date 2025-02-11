@@ -222,7 +222,10 @@ static int handle_pollins(ServerData *sd)
     {
         if(sd->clients[i].revents & POLLIN)
         {
-            handle_fd(sd->clients[i].fd, sd);
+            if(handle_fd(sd->clients[i].fd, sd) == 2)
+            {
+                // close(sd->clients[i].fd);
+            }
         }
     }
     return 0;

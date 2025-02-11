@@ -264,9 +264,9 @@ int handle_fd(int fd, ServerData *server_data)
     HandlerArgs    ha;
 
     read_header_result = read_fully(fd, header_buffer, HEADER_SIZE);
-    if(handle_read_request_res(read_header_result, fd))
+    if(handle_read_request_res(read_header_result, fd) == CLIENT_DISCONNECTED)
     {
-        ret = 1;
+        ret = 2;
         goto end;
     }
 
@@ -289,6 +289,7 @@ int handle_fd(int fd, ServerData *server_data)
         goto end;
     }
     printf("packet type: %u\n", hd.packet_type);
+
     handler = get_handler_function(hd.packet_type);
     if(handler == NULL)
     {
@@ -334,6 +335,10 @@ int handle_read_request_res(int res, int fd)
     {
         send_sys_error(fd, P_SERVER_FAILURE, P_SERVER_FAILURE_MSG);
         return 1;
+    }
+    if(res == CLIENT_DISCONNECTED)
+    {
+        return 2;
     }
     return 0;
 }

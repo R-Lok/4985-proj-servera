@@ -56,14 +56,14 @@ int handle_login(HandlerArgs *args, int fd)
         return 0;    // not system error, ok
     }
 
-    printf("login:%s:%s | remaining bytes: %u\n", username, password, remaining_bytes);    // remove this later;
+    printf("login:%s:%s | remaining bytes: %u | fd:%d\n", username, password, remaining_bytes, fd);    // remove this later;
 
     // call try_login() - this function would do DB calls for the username (key), if nothing returned, or value (password) does not match, error
     // try_login would also be responsible for updating sd->fd_map
     // if try_login error, send sys_error, else send sys_success
     if(try_login(args->sd->user_db, args->sd->fd_map, fd, username, password) == 0)
     {
-        printf("Login success: %s | session info: %s:%u\n", username, args->sd->fd_map[fd].username, args->sd->fd_map[fd].uid);    // send LOGIN SUCCESS packet
+        printf("Login success: %s | session info: uid:%u, socket:%d\n", args->sd->fd_map[fd].username, args->sd->fd_map[fd].uid, fd);    // send LOGIN SUCCESS packet
         send_login_success(fd, args->sd->fd_map[fd].uid);
     }
     else
