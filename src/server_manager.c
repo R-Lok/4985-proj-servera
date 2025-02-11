@@ -55,7 +55,7 @@ int send_user_count(int sock_fd, uint16_t user_count)
     char               *payload;
     char               *message;
     int                 ret;
-    uint16_t user_count_network_order;
+    uint16_t            user_count_network_order;
     PayloadField        pf;
 
     ret = 0;

@@ -12,7 +12,7 @@ typedef struct    // This struct is the elements of the fd_map in ServerData. Ea
     // cppcheck-suppress unusedStructMember
     char username[MAX_USERNAME_LENGTH];    // This should be zero'd out (all nul terminators) if not logged in
     // cppcheck-suppress unusedStructMember
-    uint8_t uid;    // This should be 0, if they are not logged in.
+    uint16_t uid;    // This should be 0, if they are not logged in.
 } SessionUser;
 
 typedef struct

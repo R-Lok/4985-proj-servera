@@ -338,7 +338,7 @@ int handle_read_request_res(int res, int fd)
     return 0;
 }
 
-int send_login_success(int fd, uint8_t uid)
+int send_login_success(int fd, uint16_t uid)
 {
     HeaderData   hd;
     char        *header;
@@ -346,6 +346,7 @@ int send_login_success(int fd, uint8_t uid)
     char        *message;
     int          ret;
     PayloadField pf;
+    uint16_t     network_order_uid;
 
     ret = 0;
 
@@ -365,8 +366,9 @@ int send_login_success(int fd, uint8_t uid)
     // Use HeaderData struct to fill in the serialized Header array.
     pickle_header(header, &hd);
 
+    network_order_uid = htons(uid);
     // Fill in the payload fields. SYS error has two fields, so fill in two PayloadField structs. (order matters - has to match protocol)
-    pf.data            = &uid;
+    pf.data            = &network_order_uid;
     pf.ber_tag         = P_INTEGER;
     pf.data_size_bytes = sizeof(uid);
 

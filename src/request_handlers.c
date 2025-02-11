@@ -16,12 +16,12 @@ int handle_acc_create(HandlerArgs *args, int fd);
 
 int extract_field(char **payload_ptr, void *buffer, uint16_t *byte_threshold, uint8_t ber_tag);
 
-int     extract_user_pass(char *payload_buffer, char *username, char *password, uint16_t *remaining_bytes);
-int     try_acc_create(DBM *user_db, DBM *metadata_db, const char *username, const char *password);
-int     check_user_exists(DBM *user_db, const char *username);
-uint8_t increment_uid(DBM *metadata_db);
-int     insert_new_user(DBM *user_db, const char *username, const char *password, uint8_t uid);
-int     try_login(DBM *user_db, SessionUser *fd_map, int fd, const char *username, const char *password);
+int      extract_user_pass(char *payload_buffer, char *username, char *password, uint16_t *remaining_bytes);
+int      try_acc_create(DBM *user_db, DBM *metadata_db, const char *username, const char *password);
+int      check_user_exists(DBM *user_db, const char *username);
+uint16_t increment_uid(DBM *metadata_db);
+int      insert_new_user(DBM *user_db, const char *username, const char *password, uint16_t uid);
+int      try_login(DBM *user_db, SessionUser *fd_map, int fd, const char *username, const char *password);
 
 RequestHandler get_handler_function(uint8_t packet_type)
 {
@@ -204,8 +204,8 @@ int try_acc_create(DBM *user_db, DBM *metadata_db, const char *username, const c
     const int USERNAME_TAKEN = 1;
     const int DB_ERROR       = 2;
 
-    int     user_exists_res;
-    uint8_t uid;
+    int      user_exists_res;
+    uint16_t uid;
 
     user_exists_res = check_user_exists(user_db, username);
     if(user_exists_res == 1)
@@ -248,16 +248,16 @@ int check_user_exists(DBM *user_db, const char *username)
     return USER_EXISTS;
 }
 
-uint8_t increment_uid(DBM *metadata_db)
+uint16_t increment_uid(DBM *metadata_db)
 {
-    const uint8_t FIRST_UID = 1;
-    const uint8_t ERROR     = 0;
-    const char   *key       = "numusers";
-    uint8_t       uid;
+    const uint16_t FIRST_UID = 1;
+    const uint16_t ERROR     = 0;
+    const char    *key       = "numusers";
+    uint16_t       uid;
 
-    if(retrieve_uint8(metadata_db, key, &uid) == -1)
+    if(retrieve_uint16(metadata_db, key, &uid) == -1)
     {    // no previous "numusers" entry
-        if(store_uint8(metadata_db, key, FIRST_UID) == -1)
+        if(store_uint16(metadata_db, key, FIRST_UID) == -1)
         {                    // set numusers to 1
             return ERROR;    // if storing has error
         }
@@ -266,14 +266,14 @@ uint8_t increment_uid(DBM *metadata_db)
 
     uid++;    // increment the retrieved number
 
-    if(store_uint8(metadata_db, key, uid) == -1)
+    if(store_uint16(metadata_db, key, uid) == -1)
     {                    // store incremented number
         return ERROR;    // if storing has error
     }
     return uid;    // returned the incremented uid to assign to the user
 }
 
-int insert_new_user(DBM *user_db, const char *username, const char *password, uint8_t uid)
+int insert_new_user(DBM *user_db, const char *username, const char *password, uint16_t uid)
 {
     char       *serialized_data;
     char       *shift_ptr;
@@ -281,7 +281,7 @@ int insert_new_user(DBM *user_db, const char *username, const char *password, ui
     const_datum key;
     datum       value;
 
-    serialized_data = (char *)malloc((strlen(password) + 1) + sizeof(uint8_t));
+    serialized_data = (char *)malloc((strlen(password) + 1) + sizeof(uid));
     if(serialized_data == NULL)
     {
         return -1;    // malloc error;
@@ -306,9 +306,9 @@ int try_login(DBM *user_db, SessionUser *fd_map, int fd, const char *username, c
 {
     const int INVALID_AUTH = 1;
     // const int SERVER_ERROR = 2;
-    char    retrieved_pass[PASSWORD_BUFFER_SIZE + 1];
-    uint8_t retrieved_uid;
-    datum   result;
+    char     retrieved_pass[PASSWORD_BUFFER_SIZE + 1];
+    uint16_t retrieved_uid;
+    datum    result;
 
     const_datum key;
 

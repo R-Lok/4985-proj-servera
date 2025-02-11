@@ -79,7 +79,7 @@ typedef struct
 int   handle_fd(int fd, ServerData *server_data);
 int   send_sys_error(int fd, uint8_t err_code, const char *err_msg);
 int   send_sys_success(int fd, uint8_t packet_type);
-int   send_login_success(int fd, uint8_t uid);
+int   send_login_success(int fd, uint16_t uid);
 void  pickle_header(char *arr, const HeaderData *hd);
 char *construct_payload(PayloadField *payload_fields, size_t num_fields, size_t payload_len);
 char *construct_message(const char *header, const char *payload, size_t header_len, size_t payload_len);

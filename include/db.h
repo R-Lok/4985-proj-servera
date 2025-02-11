@@ -21,8 +21,8 @@ typedef struct
 
 #define MAKE_CONST_DATUM(str) ((const_datum){(str), (datum_size)strlen(str) + 1})
 int   store_string(DBM *db, const char *key, const char *value);
-int   store_uint8(DBM *db, const char *key, uint8_t value);
+int   store_uint16(DBM *db, const char *key, uint16_t value);
 char *retrieve_string(DBM *db, const char *key);
-int   retrieve_uint8(DBM *db, const char *key, uint8_t *result);
+int   retrieve_uint16(DBM *db, const char *key, uint16_t *result);
 
 #endif
