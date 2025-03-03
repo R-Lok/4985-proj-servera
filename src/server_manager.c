@@ -3,10 +3,16 @@
 #include "../include/protocol.h"
 #include "../include/socket.h"
 #include <arpa/inet.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#define SERVER_PATH "./build/main"
+#define SERVER_PROG_NAME "main"
+#define SERVER_PORT "8080"
+#define PORT_FLAG "-p"
 
 void pickle_server_manager_header(char *arr, const ServerManagerHeader *hd);
 
@@ -112,4 +118,52 @@ void pickle_server_manager_header(char *arr, const ServerManagerHeader *hd)
     *(uint8_t *)arr         = hd->packet_type;
     *((uint8_t *)(arr + 1)) = hd->protocol_ver;
     memcpy(arr + 2, &host_order_payload_len, sizeof(host_order_payload_len));
+}
+
+int server_loop(int sm_fd)
+{
+    int  child_id;
+    char fd_string[OPEN_MAX];
+    // int  child_exists;
+    snprintf(fd_string, sizeof(fd_string), "%d", sm_fd);
+    setenv("SM_FD", fd_string, 1);
+    // Need to wrap in some sort of loop here to read from server manager, if start -> exec the server, if stop -> kill the child (milestone3)
+    // but don't fork a server is child already exists, and if stopping but not server -> no effect
+
+    child_id = fork();
+    if(child_id == -1)
+    {
+        fprintf(stderr, "fork() failed\n");
+        return 1;
+    }
+    if(child_id == 0)
+    {
+        execl(SERVER_PATH, SERVER_PROG_NAME, PORT_FLAG, SERVER_PORT, NULL);
+        printf("exec failed\n");
+        exit(1);    // exec failed;
+    }
+    else
+    {
+        // child_exists = 1;
+        // printf("child exist: %d | child id = %d \n", child_exists, child_id);
+    }
+
+    return 0;
+}
+
+int retrieve_sm_fd(int *sm_fd_holder)
+{
+    const int   BASE_TEN = 10;
+    const char *env_val  = getenv("SM_FD");
+    if(env_val != NULL)
+    {
+        char *endptr;
+        *sm_fd_holder = (int)strtol(env_val, &endptr, BASE_TEN);
+        if(*endptr != '\0')
+        {
+            return -1;    // ENV VAR INVALID <- shouldnt happen
+        }
+        return 0;
+    }
+    return -1;    // ENV VAR missing
 }

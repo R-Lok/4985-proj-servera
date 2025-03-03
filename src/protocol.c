@@ -1,6 +1,7 @@
 #include "../include/protocol.h"
 #include "../include/io.h"
 #include "../include/request_handlers.h"
+#include "../include/server_manager.h"
 #include "../include/user.h"
 #include <errno.h>
 #include <poll.h>
@@ -451,6 +452,7 @@ int send_cht_received(int fd, uint16_t sender_id)
 int handle_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig_atomic_t *running)
 {
     int        ret;
+    int        sm_fd;
     ServerData sd;
     char       user_db_filename[DB_BUFFER];
     char       metadata_db_filename[DB_BUFFER];
@@ -484,6 +486,15 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig
         free(sd.clients);
         return 1;
     }
+
+    if(retrieve_sm_fd(&sm_fd))
+    {
+        fprintf(stderr, "failed to retrieve server manager fd\n");
+        free(sd.clients);
+        free(sd.fd_map);
+        return 1;
+    }
+    printf("smfd: %d", sm_fd);
 
     while(*running == 1)
     {

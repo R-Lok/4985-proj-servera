@@ -49,6 +49,7 @@ int main(int argc, char **argv)
         goto end;    // SIGINT received
     }
 
+    server_loop(sock_fd);    // temp, needs to capture return value
 
     printf("Server starter closing...\n");
 end:

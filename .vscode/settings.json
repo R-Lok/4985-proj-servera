@@ -5,6 +5,8 @@
         "request_handlers.h": "c",
         "string.h": "c",
         "socket.h": "c",
-        "unistd.h": "c"
+        "unistd.h": "c",
+        "ratio": "c",
+        "server_manager.h": "c"
     }
 }
