@@ -19,6 +19,8 @@
 #define ACC_LOGIN_SUCCESS 11    // System response that log in was successful
 #define ACC_LOGOUT 12           // User request to log out
 #define ACC_CREATE 13
+#define CHT_SEND 20        // Chat message sending
+#define CHT_RECEIVED 21    // Chat message recieved
 
 /*Server-Client Error codes*/
 // #define P_INVALID_USER_ID 11
@@ -44,7 +46,7 @@
 // #define P_SEQUENCE 16
 // #define P_PRINTABLESTRING 19
 // #define P_UTC_TIME 23
-// #define P_GENERALIZED_TIME 24
+#define P_GENERALIZED_TIME 24
 
 #define PAYLOAD_READ_BUF_SIZE 1024
 
@@ -83,5 +85,6 @@ int   send_login_success(int fd, uint16_t uid);
 void  pickle_header(char *arr, const HeaderData *hd);
 char *construct_payload(PayloadField *payload_fields, size_t num_fields, size_t payload_len);
 char *construct_message(const char *header, const char *payload, size_t header_len, size_t payload_len);
+int   send_cht_received(int fd, uint16_t sender_id);
 
 #endif

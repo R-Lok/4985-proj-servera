@@ -1,4 +1,5 @@
 #include "../include/request_handlers.h"
+#include "../include/io.h"
 #include "../include/protocol.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,11 +7,16 @@
 #include <unistd.h>
 
 #define NAME_BUFFER_SIZE 256
+#define TIMESTAMP_BUFFER_SIZE 128
+#define MESSAGE_BUFFER_SIZE 512
 #define PASSWORD_BUFFER_SIZE 256
 
 int handle_login(HandlerArgs *args, int fd);
 int handle_logout(HandlerArgs *args, int fd);
 int handle_acc_create(HandlerArgs *args, int fd);
+int handle_chat(HandlerArgs *args, int fd);
+int extract_chat_fields(const HeaderData *hd, char *payload_buffer, char *timestamp_buf, char *message_buf, char *usr_buf);
+int is_valid_timestamp(const char *timestamp);
 
 // int extract_login_fields(uint16_t reported_payload_length, char *p_buffer, char *name, char *password);
 
@@ -435,3 +441,117 @@ int try_login(DBM *user_db, SessionUser *fd_map, int fd, const char *username, c
 // name_fail:
 //     return ret;
 // }
+
+int handle_chat(HandlerArgs *args, int fd)
+{
+    char        timestamp_buf[TIMESTAMP_BUFFER_SIZE];
+    char        message_buf[MESSAGE_BUFFER_SIZE];
+    char        username_buf[NAME_BUFFER_SIZE];
+    char        header[HEADER_SIZE];
+    char       *message;
+    const char *payload_dup = args->payload_buffer;
+
+    if(extract_chat_fields(args->hd, args->payload_buffer, timestamp_buf, message_buf, username_buf))
+    {
+        send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);
+        return 0;
+    }
+
+    if(strcmp(username_buf, args->sd->fd_map[fd].username) != 0)
+    {
+        send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);
+        return 0;
+    }
+
+    pickle_header(header, args->hd);
+    message = construct_message(header, payload_dup, HEADER_SIZE, args->hd->payload_len);
+    if(message == NULL)
+    {
+        return 1;
+    }
+
+    if(send_cht_received(fd, args->hd->sender_id))
+    {    // send cht_received to sender
+        fprintf(stderr, "Failed to send cht_received\n");
+        return 1;
+    }
+
+    for(nfds_t i = 0; i < args->sd->num_clients; i++)
+    {
+        int curr_client = args->sd->clients[i].fd;
+
+        if(args->sd->fd_map[curr_client].uid != 0 && args->sd->fd_map[curr_client].uid != fd)
+        {
+            if(write_fully(curr_client, message, (size_t)HEADER_SIZE + args->hd->payload_len) == WRITE_ERROR) //consider handling the other error types (not server errors)
+            {
+                fprintf(stderr, "Error forwarding chat message\n");
+                free(message);
+                return 1;
+            }
+        }
+    }
+
+    free(message);
+    return 0;
+}
+
+int extract_chat_fields(const HeaderData *hd, char *payload_buffer, char *timestamp_buf, char *message_buf, char *usr_buf)
+{
+    uint16_t byte_threshold;
+
+    byte_threshold = hd->payload_len;
+
+    if(extract_field(&payload_buffer, timestamp_buf, &byte_threshold, P_GENERALIZED_TIME))
+    {
+        return 1;    // bad request
+    }
+
+    if(is_valid_timestamp(timestamp_buf) == 0)
+    {
+        return 1;
+    }
+
+    if(extract_field(&payload_buffer, message_buf, &byte_threshold, P_UTF8STRING))
+    {
+        return 1;
+    }
+
+    if(extract_field(&payload_buffer, usr_buf, &byte_threshold, P_UTF8STRING))
+    {
+        return 1;
+    }
+    return 0;
+}
+
+int is_valid_timestamp(const char *timestamp)
+{
+    struct tm time = {0};
+    char     *endptr;
+
+    endptr = strptime(timestamp, "%Y%m%d%H%M%S", &time);
+    if(endptr == NULL)
+    {
+        return 0;    // String does not contain timestamp
+    }
+
+    if(mktime(&time) == -1)
+    {
+        return 0;    // Impossible date
+    }
+
+    if(*endptr == 'Z')    // check if ending with Z
+    {
+        endptr++;
+    }
+    else
+    {
+        return 0;    // if not ending with Z, not formatted correctly
+    }
+
+    if(*endptr != '\0')
+    {
+        return 0;    // Reject extra characters after 'Z'
+    }
+
+    return 1;    // Valid timestamp
+}

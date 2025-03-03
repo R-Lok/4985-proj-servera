@@ -406,3 +406,23 @@ payload_fail:
     free(header);
     return ret;
 }
+
+int send_cht_received(int fd, uint16_t sender_id)
+{
+    HeaderData hd;
+    char       header[HEADER_SIZE];
+
+    hd.packet_type  = CHT_RECEIVED;
+    hd.protocol_ver = PROTOCOL_VERSION;
+    hd.sender_id    = sender_id;
+    hd.payload_len  = 0;
+
+    pickle_header(header, &hd);
+
+    if(write_fully(fd, header, (size_t)HEADER_SIZE) == WRITE_ERROR)    // need to also handle TIMEOUT (send sys error to indicate timeout)
+    {
+        fprintf(stderr, "Error sending cht_received\n");
+        return 1;
+    }
+    return 0;
+}

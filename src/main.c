@@ -67,7 +67,7 @@ int main(int argc, char **argv)
     }
     else
     {
-        printf("No server manager connection detected");
+        printf("No server manager connection detected\n");
     }
 
     handle_connections(sock_fd, &addr, &running);
