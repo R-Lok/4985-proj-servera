@@ -40,6 +40,8 @@ RequestHandler get_handler_function(uint8_t packet_type)
         case ACC_CREATE:
             printf("selecting handle_acc_create\n");
             return handle_acc_create;
+        case CHT_SEND:
+            return handle_chat;
         default:
             return NULL;
     }
@@ -482,7 +484,7 @@ int handle_chat(HandlerArgs *args, int fd)
 
         if(args->sd->fd_map[curr_client].uid != 0 && args->sd->fd_map[curr_client].uid != fd)
         {
-            if(write_fully(curr_client, message, (size_t)HEADER_SIZE + args->hd->payload_len) == WRITE_ERROR) //consider handling the other error types (not server errors)
+            if(write_fully(curr_client, message, (size_t)HEADER_SIZE + args->hd->payload_len) == WRITE_ERROR)    // consider handling the other error types (not server errors)
             {
                 fprintf(stderr, "Error forwarding chat message\n");
                 free(message);

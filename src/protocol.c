@@ -263,6 +263,8 @@ int handle_fd(int fd, ServerData *server_data)
     RequestHandler handler;
     HandlerArgs    ha;
 
+    payload_buffer = NULL;
+
     read_header_result = read_fully(fd, header_buffer, HEADER_SIZE);
     if(handle_read_request_res(read_header_result, fd) == CLIENT_DISCONNECTED)
     {
@@ -276,7 +278,7 @@ int handle_fd(int fd, ServerData *server_data)
         send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);
     }
 
-    payload_buffer = malloc_payload_buffer(hd.payload_len);
+    payload_buffer = malloc_payload_buffer(hd.payload_len);    // need to handle if payload_len is 0 (no payload - will cause issues i think)
     if(payload_buffer == NULL)
     {
         return 1;
@@ -304,7 +306,10 @@ int handle_fd(int fd, ServerData *server_data)
     ret               = handler(&ha, fd);
 
 bad_req:
-    free(payload_buffer);
+    if(payload_buffer)
+    {
+        free(payload_buffer);
+    }
 end:
     return ret;
 }
