@@ -3,6 +3,8 @@
         "*.ejs": "html",
         "__locale": "c",
         "request_handlers.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "socket.h": "c",
+        "unistd.h": "c"
     }
 }

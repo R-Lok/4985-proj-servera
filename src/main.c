@@ -1,4 +1,5 @@
 #include "../include/args.h"
+#include "../include/protocol.h"
 #include "../include/server_manager.h"
 #include "../include/socket.h"
 #include <signal.h>
