@@ -278,17 +278,20 @@ int handle_fd(int fd, ServerData *server_data)
         send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);
     }
 
-    payload_buffer = malloc_payload_buffer(hd.payload_len);    // need to handle if payload_len is 0 (no payload - will cause issues i think)
-    if(payload_buffer == NULL)
+    if(hd.payload_len != 0)
     {
-        return 1;
-    }
+        payload_buffer = malloc_payload_buffer(hd.payload_len);    // need to handle if payload_len is 0 (no payload - will cause issues i think)
+        if(payload_buffer == NULL)
+        {
+            return 1;
+        }
 
-    read_payload_result = read_fully(fd, payload_buffer, hd.payload_len);
-    if(handle_read_request_res(read_payload_result, fd))
-    {
-        ret = 1;
-        goto end;
+        read_payload_result = read_fully(fd, payload_buffer, hd.payload_len);
+        if(handle_read_request_res(read_payload_result, fd))
+        {
+            ret = 1;
+            goto bad_req;
+        }
     }
     printf("packet type: %u\n", hd.packet_type);
 
