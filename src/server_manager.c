@@ -10,34 +10,26 @@
 
 void pickle_server_manager_header(char *arr, const ServerManagerHeader *hd);
 
-int server_manager_connect(void)
+int server_manager_connect(int sock_fd, const struct sockaddr_in *sm_addr, const volatile sig_atomic_t *running)
 {
-    struct sockaddr_in server_manager_addr;
-    int                err;
-    const char        *sm_ipv4 = "192.168.0.66";    // change depending on sm ipv4 address
-    int                sock_fd;
-
-    // Function from socket.h to set up sm address
-    if(setup_addr(sm_ipv4, &server_manager_addr, SERVER_MANAGER_PORT, &err) != 0)
+    const uint8_t RETRY_TIME = 5;
+    int           connected;
+    int           ret = 1;
+    connected         = 0;
+    while(*running == 1 && connected == 0)
     {
-        fprintf(stderr, "Error settng up server manager address");
-        return -1;
+        printf("Attempting to connect to server manager..\n");
+        if(connect(sock_fd, (const struct sockaddr *)sm_addr, sizeof(*(sm_addr))) == 0)
+        {
+            connected = 1;
+            ret       = 0;
+        }
+        else
+        {
+            sleep(RETRY_TIME);
+        }
     }
-
-    // Create and connect to socket
-    sock_fd = socket(server_manager_addr.sin_family, SOCK_STREAM, 0);    // NOLINT(android-cloexec-socket)
-    if(sock_fd == -1)
-    {
-        fprintf(stderr, "Error calling socket()\n");
-        return -1;
-    }
-    if(connect(sock_fd, (struct sockaddr *)&server_manager_addr, sizeof(server_manager_addr)) == -1)
-    {
-        fprintf(stderr, "Error connecting to server manager\n");
-        close(sock_fd);
-        return -1;
-    }
-    return sock_fd;
+    return ret;
 }
 
 void server_manager_disconnect(int sock_fd)

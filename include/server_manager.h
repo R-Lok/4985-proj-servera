@@ -2,6 +2,7 @@
 #define SERVER_MANAGER_H
 
 #include <netinet/in.h>
+#include <signal.h>
 #include <stdint.h>
 
 #define SERVER_MANAGER_UP "127.0.0.1"
@@ -19,7 +20,7 @@ typedef struct
     uint16_t payload_len;
 } ServerManagerHeader;
 
-int  server_manager_connect(void);
+int  server_manager_connect(int sock_fd, const struct sockaddr_in *sm_addr, const volatile sig_atomic_t *running);
 void server_manager_disconnect(int sock_fd);
 int  send_user_count(int sock_fd, uint16_t user_count);
 

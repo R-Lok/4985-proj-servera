@@ -21,7 +21,6 @@ int main(int argc, char **argv)
     struct sockaddr_in addr;
     int                err;
     int                sock_fd;
-    int                sm_fd;
 
     port = DEFAULT_PORT;
     signal(SIGINT, handle_signal);
@@ -55,27 +54,7 @@ int main(int argc, char **argv)
 
     // Attempt to connect to server manager
 
-    sm_fd = server_manager_connect();
-    if(sm_fd != -1)
-    {
-        printf("Connected to server manager");
-
-        // Send user count
-        send_user_count(sm_fd, 0);    // Send zero for now
-
-        // Close connection once done
-        server_manager_disconnect(sm_fd);
-    }
-    else
-    {
-        printf("No server manager connection detected\n");
-    }
-
     handle_connections(sock_fd, &addr, &running);
-    if(sm_fd != -1)
-    {
-        close(sm_fd);
-    }
     close(sock_fd);
     return EXIT_SUCCESS;
 }
