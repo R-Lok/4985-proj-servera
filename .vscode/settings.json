@@ -7,6 +7,7 @@
         "socket.h": "c",
         "unistd.h": "c",
         "ratio": "c",
-        "server_manager.h": "c"
+        "server_manager.h": "c",
+        "protocol.h": "c"
     }
 }

@@ -134,7 +134,7 @@ void pickle_server_manager_header(char *arr, const ServerManagerHeader *hd)
 int server_loop(int sm_fd)
 {
     int  child_id;
-    char fd_string[OPEN_MAX];
+    char fd_string[MAX_CONNECTED_CLIENTS + 4];
     // int  child_exists;
     snprintf(fd_string, sizeof(fd_string), "%d", sm_fd);
     setenv("SM_FD", fd_string, 1);

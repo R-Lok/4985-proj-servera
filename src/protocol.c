@@ -1,9 +1,11 @@
 #include "../include/protocol.h"
+#include "../include/db.h"
 #include "../include/io.h"
 #include "../include/request_handlers.h"
 #include "../include/server_manager.h"
 #include "../include/user.h"
 #include <errno.h>
+#include <fcntl.h>
 #include <poll.h>
 #include <socket.h>
 #include <stdio.h>
@@ -11,9 +13,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#define POLL_TIMEOUT 500              // time to wait for each poll call
-#define DB_BUFFER 16                  // buffer for db names in char arrays
-#define MAX_CONNECTED_CLIENTS 1024    // max number of connected clients (can change to dynamic resize later if required)
+#define POLL_TIMEOUT 500    // time to wait for each poll call
+#define DB_BUFFER 16        // buffer for db names in char arrays
 
 void extract_header(const char *buffer, HeaderData *header);
 int  is_valid_header(const HeaderData *header);

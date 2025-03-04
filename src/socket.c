@@ -1,4 +1,3 @@
-#include "../include/db.h"
 #include "../include/protocol.h"
 #include "../include/user.h"
 #include <../include/socket.h>
