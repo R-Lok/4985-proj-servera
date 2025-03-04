@@ -7,7 +7,7 @@
 #include <signal.h>
 #include <stddef.h>
 
-#define PROTOCOL_VERSION 1
+#define PROTOCOL_VERSION 2
 #define SYSTEM_ID 0
 #define EXTRA_BYTES_FOR_BER_AND_LENGTH 2
 

@@ -472,7 +472,7 @@ int handle_chat(HandlerArgs *args, int fd)
         return 1;
     }
 
-    if(send_cht_received(fd, args->hd->sender_id))
+    if(send_sys_success(fd, CHT_SEND))
     {    // send cht_received to sender
         fprintf(stderr, "Failed to send cht_received\n");
         return 1;
