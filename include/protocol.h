@@ -88,6 +88,6 @@ void  pickle_header(char *arr, const HeaderData *hd);
 char *construct_payload(PayloadField *payload_fields, size_t num_fields, size_t payload_len);
 char *construct_message(const char *header, const char *payload, size_t header_len, size_t payload_len);
 int   send_cht_received(int fd, uint16_t sender_id);
-int   handle_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig_atomic_t *running);
+int   handle_connections(int sock_fd, struct sockaddr_in *addr, volatile sig_atomic_t *running);
 
 #endif

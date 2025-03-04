@@ -449,7 +449,7 @@ int send_cht_received(int fd, uint16_t sender_id)
 }
 
 // This function is really long, I will probably try to abstract it later, but most of the length is due to setting things up, locking, error handling
-int handle_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig_atomic_t *running)
+int handle_connections(int sock_fd, struct sockaddr_in *addr, volatile sig_atomic_t *running)
 {
     int        ret;
     int        sm_fd;
@@ -549,6 +549,8 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig
     }
     // close all remaining client fds - need to consider - will there be server message sent to clients
     // indicating the server is shutting down? (future consideration)
+    *running = 0;
+    pthread_join(thread, NULL);    // Wait for thread to clean itself up
     for(nfds_t i = 0; i < sd.num_clients; i++)
     {
         close(sd.clients[i].fd);
