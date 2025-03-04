@@ -48,6 +48,7 @@ int is_valid_packet_type(uint8_t packet_type)
         case ACC_LOGIN:
         case ACC_CREATE:
         case ACC_LOGOUT:
+        case CHT_RECEIVED:
             return 1;
         default:
             return 0;
