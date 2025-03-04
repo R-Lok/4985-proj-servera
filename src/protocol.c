@@ -184,7 +184,7 @@ int send_sys_success(int fd, uint8_t packet_type)
 
     if(write_fully(fd, message, (size_t)HEADER_SIZE + hd.payload_len) == WRITE_ERROR)    // need to also handle TIMEOUT (send sys error to indicate timeout)
     {
-        fprintf(stderr, "Error sending sys error\n");
+        fprintf(stderr, "Error sending sys success\n");
         ret = 1;
     }
 
