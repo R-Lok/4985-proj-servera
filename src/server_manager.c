@@ -11,10 +11,21 @@
 
 #define SERVER_PATH "./build/main"
 #define SERVER_PROG_NAME "main"
-#define SERVER_PORT "8080"
+#define SERVER_PORT "8000"
 #define PORT_FLAG "-p"
 
+#define DIAGNOSTIC_DELAY 10
+
+typedef struct
+{
+    int                          fd;
+    uint16_t                    *usr_count_ptr;
+    const volatile sig_atomic_t *running;
+} ThreadArgs;
+
 void pickle_server_manager_header(char *arr, const ServerManagerHeader *hd);
+
+void *thread_send_usrcount(void *args);
 
 int server_manager_connect(int sock_fd, const struct sockaddr_in *sm_addr, const volatile sig_atomic_t *running)
 {
@@ -166,4 +177,41 @@ int retrieve_sm_fd(int *sm_fd_holder)
         return 0;
     }
     return -1;    // ENV VAR missing
+}
+
+int create_sm_diagnostic_thread(pthread_t *thread, int sm_fd, uint16_t *user_count_ptr, const volatile sig_atomic_t *running)
+{
+    ThreadArgs *ta = (ThreadArgs *)malloc(sizeof(ThreadArgs));
+    if(!ta)
+    {
+        fprintf(stderr, "Memory allocation failed\n");
+        return 1;
+    }
+    ta->fd            = sm_fd;
+    ta->usr_count_ptr = user_count_ptr;
+    ta->running       = running;
+
+    if(pthread_create(thread, NULL, thread_send_usrcount, (void *)ta))
+    {
+        fprintf(stderr, "error creating thread\n");
+        return 1;
+    }
+    return 0;
+}
+
+void *thread_send_usrcount(void *args)
+{
+    ThreadArgs *ta;
+
+    ta = (ThreadArgs *)args;
+
+    while((*ta->running) == 1)
+    {
+        printf("Thread running...\n");
+        send_user_count(ta->fd, *ta->usr_count_ptr);
+        sleep(DIAGNOSTIC_DELAY);
+    }
+    printf("Thread exiting...%d\n", *ta->running);
+    free(ta);
+    return NULL;
 }

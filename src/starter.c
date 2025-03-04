@@ -51,6 +51,10 @@ int main(int argc, char **argv)
 
     server_loop(sock_fd);    // temp, needs to capture return value
 
+    while(running)
+    {
+    }
+
     printf("Server starter closing...\n");
 end:
     return ret;

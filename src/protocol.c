@@ -456,6 +456,7 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig
     ServerData sd;
     char       user_db_filename[DB_BUFFER];
     char       metadata_db_filename[DB_BUFFER];
+    pthread_t  thread;
 
     strcpy(user_db_filename, "user_db");
     strcpy(metadata_db_filename, "metadata_db");
@@ -495,6 +496,11 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, const volatile sig
         return 1;
     }
     printf("smfd: %d", sm_fd);
+
+    if(create_sm_diagnostic_thread(&thread, sm_fd, &sd.num_clients, running))
+    {
+        return 1;
+    }
 
     while(*running == 1)
     {

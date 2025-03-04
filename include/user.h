@@ -23,7 +23,7 @@ typedef struct
     SessionUser *fd_map;    // A map containing all the connected clients. We the file descriptor as the index to this array. So we can tie each fd to
                             // a specific username and uid.
     // cppcheck-suppress unusedStructMember
-    nfds_t num_clients;    // Just tracking the number of connected clients (don't have to be logged in)
+    uint16_t num_clients;    // Just tracking the number of connected clients (don't have to be logged in)
     // cppcheck-suppress unusedStructMember
     DBM *user_db;
     // cppcheck-suppress unusedStructMember
