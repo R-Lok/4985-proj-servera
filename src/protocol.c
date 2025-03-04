@@ -61,7 +61,7 @@ int is_valid_packet_type(uint8_t packet_type)
         case ACC_LOGIN:
         case ACC_CREATE:
         case ACC_LOGOUT:
-        case CHT_RECEIVED:
+        case CHT_SEND:
             return 1;
         default:
             return 0;
@@ -287,10 +287,6 @@ int handle_fd(int fd, ServerData *server_data)
     }
 
     extract_header(header_buffer, &hd);
-    if(is_valid_header(&hd) == 0)
-    {
-        send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);
-    }
 
     if(hd.payload_len != 0)
     {
@@ -306,6 +302,13 @@ int handle_fd(int fd, ServerData *server_data)
             ret = 1;
             goto bad_req;
         }
+    }
+    if(is_valid_header(&hd) == 0)
+    {
+        fprintf(stderr, "invalid header received\n");
+        send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);
+        ret = 0;
+        goto bad_req;
     }
     printf("packet type: %u\n", hd.packet_type);
 

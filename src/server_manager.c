@@ -207,7 +207,7 @@ void *thread_send_usrcount(void *args)
 
     while((*ta->running) == 1)
     {
-        printf("Thread running...\n");
+        // printf("Thread running...\n");
         send_user_count(ta->fd, *ta->usr_count_ptr);
         sleep(DIAGNOSTIC_DELAY);
     }

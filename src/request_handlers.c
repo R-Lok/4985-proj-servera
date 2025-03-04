@@ -455,12 +455,14 @@ int handle_chat(HandlerArgs *args, int fd)
 
     if(extract_chat_fields(args->hd, args->payload_buffer, timestamp_buf, message_buf, username_buf))
     {
+        fprintf(stderr, "extract_chat_fields\n");
         send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);
         return 0;
     }
 
     if(strcmp(username_buf, args->sd->fd_map[fd].username) != 0)
     {
+        fprintf(stderr, "username not match\n");
         send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);
         return 0;
     }
@@ -482,7 +484,7 @@ int handle_chat(HandlerArgs *args, int fd)
     {
         int curr_client = args->sd->clients[i].fd;
 
-        if(args->sd->fd_map[curr_client].uid != 0 && args->sd->fd_map[curr_client].uid != fd)
+        if(args->sd->fd_map[curr_client].uid != 0 && curr_client != fd)
         {
             if(write_fully(curr_client, message, (size_t)HEADER_SIZE + args->hd->payload_len) == WRITE_ERROR)    // consider handling the other error types (not server errors)
             {
