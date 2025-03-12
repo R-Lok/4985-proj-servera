@@ -474,17 +474,11 @@ int handle_chat(HandlerArgs *args, int fd)
         return 1;
     }
 
-    if(send_sys_success(fd, CHT_SEND))
-    {    // send cht_received to sender
-        fprintf(stderr, "Failed to send cht_received\n");
-        return 1;
-    }
-
     for(nfds_t i = 0; i < args->sd->num_clients; i++)
     {
         int curr_client = args->sd->clients[i].fd;
 
-        if(args->sd->fd_map[curr_client].uid != 0 && curr_client != fd)
+        if(args->sd->fd_map[curr_client].uid != 0)
         {
             if(write_fully(curr_client, message, (size_t)HEADER_SIZE + args->hd->payload_len) == WRITE_ERROR)    // consider handling the other error types (not server errors)
             {

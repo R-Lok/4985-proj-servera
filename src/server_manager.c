@@ -70,8 +70,8 @@ int send_user_count(int sock_fd, uint16_t user_count)
     ret = 0;
 
     // Construct the header
-    smh.packet_type  = USR_COUNT;    // packet for user count
-    smh.protocol_ver = 1;            // protocol version
+    smh.packet_type  = USR_COUNT;           // packet for user count
+    smh.protocol_ver = PROTOCOL_VERSION;    // protocol version
     smh.payload_len  = (uint16_t)(sizeof(user_count) + EXTRA_BYTES_FOR_BER_AND_LENGTH);
 
     // Allocate space for header
