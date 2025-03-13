@@ -10,6 +10,9 @@
 
 #define SERVER_MANAGER_HEADER_SIZE 4
 
+// Packet types for Server-Manager
+#define SVR_Diagnostic 10
+
 typedef struct
 {
     // cppcheck-suppress unusedStructMember
@@ -22,9 +25,9 @@ typedef struct
 
 int  server_manager_connect(int sock_fd, const struct sockaddr_in *sm_addr, const volatile sig_atomic_t *running);
 void server_manager_disconnect(int sock_fd);
-int  send_user_count(int sock_fd, uint16_t user_count);
+int  send_user_count(int sock_fd, uint16_t user_count, uint32_t msg_count);
 int  server_loop(int sm_fd);
 int  retrieve_sm_fd(int *sm_fd_holder);
-int  create_sm_diagnostic_thread(pthread_t *thread, int sm_fd, uint16_t *user_count_ptr, const volatile sig_atomic_t *running);
+int  create_sm_diagnostic_thread(pthread_t *thread, int sm_fd, uint16_t *user_count_ptr, uint32_t *msg_count_ptr, const volatile sig_atomic_t *running);
 
 #endif    // SERVER_MANAGER_H

@@ -488,6 +488,7 @@ int handle_chat(HandlerArgs *args, int fd)
             }
         }
     }
+    args->sd->num_messages++;
 
     free(message);
     return 0;

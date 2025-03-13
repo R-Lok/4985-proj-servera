@@ -54,7 +54,7 @@
 #define PAYLOAD_READ_BUF_SIZE 1024
 
 // Packet types for Server-Manager
-#define USR_COUNT 10
+#define SVR_Diagnostic 10
 
 // #define MAN_Sucess 0
 // #define MAN_Error 1
