@@ -26,5 +26,11 @@ int  send_user_count(int sock_fd, uint16_t user_count);
 int  server_loop(int sm_fd);
 int  retrieve_sm_fd(int *sm_fd_holder);
 int  create_sm_diagnostic_thread(pthread_t *thread, int sm_fd, uint16_t *user_count_ptr, const volatile sig_atomic_t *running);
+int  start_server(pid_t *server_pid, int fd);
+int  stop_server(pid_t *server_pid, int fd);
+int  send_svr_online(int fd);
+int  send_svr_offline(int fd);
+int  handle_sm_packet(int sock_fd);
+int  read_sm_header(int sock_fd, ServerManagerHeader *header);
 
 #endif    // SERVER_MANAGER_H

@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #define SERVER_PATH "./build/main"
@@ -133,33 +134,55 @@ void pickle_server_manager_header(char *arr, const ServerManagerHeader *hd)
 
 int server_loop(int sm_fd)
 {
-    int  child_id;
-    char fd_string[MAX_CONNECTED_CLIENTS + 4];
+    // int  child_id;g
+    char  fd_string[MAX_CONNECTED_CLIENTS + 4];
+    pid_t server_pid = -1;    // tracking server process ID
     // int  child_exists;
+    printf("Inside server loop\n");
     snprintf(fd_string, sizeof(fd_string), "%d", sm_fd);
     setenv("SM_FD", fd_string, 1);
     // Need to wrap in some sort of loop here to read from server manager, if start -> exec the server, if stop -> kill the child (milestone3)
     // but don't fork a server is child already exists, and if stopping but not server -> no effect
 
-    child_id = fork();
-    if(child_id == -1)
+    while(1)
     {
-        fprintf(stderr, "fork() failed\n");
-        return 1;
-    }
-    if(child_id == 0)
-    {
-        execl(SERVER_PATH, SERVER_PROG_NAME, PORT_FLAG, SERVER_PORT, NULL);
-        printf("exec failed\n");
-        exit(1);    // exec failed;
-    }
-    else
-    {
-        // child_exists = 1;
-        // printf("child exist: %d | child id = %d \n", child_exists, child_id);
+        int packet_type;
+        packet_type = handle_sm_packet(sm_fd);
+
+        switch(packet_type)
+        {
+            case SVR_START:
+                printf("SVR_START received\n");
+                start_server(&server_pid, sm_fd);
+                break;
+            case SVR_STOP:
+                printf("SVR_STOP received\n");
+                stop_server(&server_pid, sm_fd);
+                break;
+            default:
+                printf("unknown packet type %d\n", packet_type);
+                break;
+        }
     }
 
-    return 0;
+    // child_id = fork();
+    // if(child_id == -1)
+    // {
+    //     fprintf(stderr, "fork() failed\n");
+    //     return 1;
+    // }
+    // if(child_id == 0)
+    // {
+    //     execl(SERVER_PATH, SERVER_PROG_NAME, PORT_FLAG, SERVER_PORT, NULL);
+    //     printf("exec failed\n");
+    //     exit(1);    // exec failed;
+    // }
+    // else
+    // {
+    //     server_pid = child_id;
+    //     // child_exists = 1;
+    //     // printf("child exist: %d | child id = %d \n", child_exists, child_id);
+    // }
 }
 
 int retrieve_sm_fd(int *sm_fd_holder)
@@ -214,4 +237,149 @@ void *thread_send_usrcount(void *args)
     printf("Thread exiting...%d\n", *ta->running);
     free(ta);
     return NULL;
+}
+
+int start_server(pid_t *server_pid, int fd)
+{
+    if(*server_pid > 0)
+    {
+        printf("Server already running with PID: %d\n", *server_pid);
+        send_svr_online(fd);
+        return 0;
+    }
+
+    *server_pid = fork();
+    if(*server_pid == -1)
+    {
+        perror("Failed to fork server process");
+        return 1;
+    }
+
+    if(*server_pid == 0)    // Child process
+    {
+        execl(SERVER_PATH, SERVER_PROG_NAME, PORT_FLAG, SERVER_PORT, NULL);
+        perror("Failed to start server");
+        exit(EXIT_FAILURE);    // Only reached if execl() fails
+    }
+
+    printf("Server started with PID %d\n", *server_pid);
+    send_svr_online(fd);
+    return 0;
+}
+
+int stop_server(pid_t *server_pid, int fd)
+{
+    printf("stopping with PID %d\n", *server_pid);
+    if(*server_pid > 0)
+    {
+        printf("stopping server with PID: %d\n", *server_pid);
+
+        if(kill(*server_pid, SIGTERM) == 0)
+        {
+            waitpid(*server_pid, NULL, 0);
+            printf("server stopped successfully.\n");
+        }
+        else
+        {
+            send_svr_online(fd);
+            perror("failed to stop server");
+            return 1;
+        }
+        *server_pid = -1;
+    }
+    else
+    {
+        printf("no server to stop\n");
+    }
+    send_svr_offline(fd);
+    return 0;
+}
+
+int send_svr_online(int fd)
+{
+    ServerManagerHeader hd;
+    char               *header;
+
+    hd.packet_type  = SVR_ONLINE;
+    hd.protocol_ver = PROTOCOL_VERSION;
+    hd.payload_len  = 0;
+
+    header = (char *)malloc(SERVER_MANAGER_HEADER_SIZE);
+    if(header == NULL)
+    {
+        fprintf(stderr, "Memory allocation failed\n");
+        return 1;
+    }
+
+    pickle_server_manager_header(header, &hd);
+
+    if(write_fully(fd, header, (size_t)(SERVER_MANAGER_HEADER_SIZE + hd.payload_len)) == WRITE_ERROR)
+    {
+        fprintf(stderr, "Error sending SVR_Online message\n");
+        free(header);
+        return 1;
+    }
+
+    free(header);
+    return 0;
+}
+
+int send_svr_offline(int fd)
+{
+    ServerManagerHeader hd;
+    char               *header;
+
+    hd.packet_type  = SVR_OFFLINE;
+    hd.protocol_ver = PROTOCOL_VERSION;
+    hd.payload_len  = 0;
+
+    header = (char *)malloc(SERVER_MANAGER_HEADER_SIZE);
+    if(header == NULL)
+    {
+        fprintf(stderr, "Memory allocation failed\n");
+        return 1;
+    }
+
+    pickle_server_manager_header(header, &hd);
+
+    if(write_fully(fd, header, (size_t)(SERVER_MANAGER_HEADER_SIZE + hd.payload_len)) == WRITE_ERROR)
+    {
+        fprintf(stderr, "Error sending SVR_Online message\n");
+        free(header);
+        return 1;
+    }
+
+    free(header);
+    return 0;
+}
+
+int read_sm_header(int sock_fd, ServerManagerHeader *header)
+{
+    char    buffer[SERVER_MANAGER_HEADER_SIZE];
+    ssize_t bytes_read = read(sock_fd, buffer, SERVER_MANAGER_HEADER_SIZE);
+
+    if(bytes_read != SERVER_MANAGER_HEADER_SIZE)
+    {
+        perror("Failed to read header");
+        return -1;
+    }
+
+    // Unpack the header
+    header->packet_type  = (uint8_t)buffer[0];
+    header->protocol_ver = (uint8_t)buffer[1];
+    memcpy(&header->payload_len, buffer + 2, sizeof(header->payload_len));
+    header->payload_len = ntohs(header->payload_len);    // Convert from network byte order
+
+    return 0;
+}
+
+int handle_sm_packet(int sock_fd)
+{
+    ServerManagerHeader header;
+    if(read_sm_header(sock_fd, &header) == -1)
+    {
+        fprintf(stderr, "Failed to read header\n");
+        return -1;
+    }
+    return header.packet_type;
 }

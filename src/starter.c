@@ -7,6 +7,11 @@
 
 #define DEFAULT_PORT 8080
 
+// set sys err (check this function for header building)
+// get server manager running on computer and use wireshark
+// no payload so don't need to combine messages
+// use pickle header
+
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static volatile sig_atomic_t running = 1;
 

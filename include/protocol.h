@@ -55,6 +55,11 @@
 
 // Packet types for Server-Manager
 #define USR_COUNT 10
+#define SVR_ONLINE 12
+#define SVR_OFFLINE 13
+
+#define SVR_START 20
+#define SVR_STOP 21
 
 // #define MAN_Sucess 0
 // #define MAN_Error 1
