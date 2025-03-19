@@ -3,6 +3,7 @@
 #include "../include/protocol.h"
 #include "../include/socket.h"
 #include <arpa/inet.h>
+#include <errno.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -132,85 +133,89 @@ void pickle_server_manager_header(char *arr, const ServerManagerHeader *hd)
     memcpy(arr + 2, &host_order_payload_len, sizeof(host_order_payload_len));
 }
 
-int server_loop(int sm_fd, int pipe_read_end)
-{
-    char          fd_string[MAX_CONNECTED_CLIENTS + 4];
-    struct pollfd fds[2];
-    pid_t         server_pid = -1;    // tracking server process ID
-    fds[0].fd                = sm_fd;
-    fds[0].events            = POLLIN;
-    fds[1].fd                = pipe_read_end;
-    fds[1].events            = POLLIN;
-
-    // int  child_id;g
-
-    // int  child_exists;
-    printf("Inside server loop\n");
-    snprintf(fd_string, sizeof(fd_string), "%d", sm_fd);
-    setenv("SM_FD", fd_string, 1);
-    // Need to wrap in some sort of loop here to read from server manager, if start -> exec the server, if stop -> kill the child (milestone3)
-    // but don't fork a server is child already exists, and if stopping but not server -> no effect
-
-    while(1)
-    {
-        int poll_count = poll(fds, 2, -1);
-        if(poll_count == -1)
-        {
-            perror("poll() failed");
-            continue;
-        }
-
-        if(fds[0].revents & POLLIN)
-        {
-            int packet_type = handle_sm_packet(sm_fd);
-            switch(packet_type)
-            {
-                case SVR_START:
-                    printf("SVR_START received\n");
-                    start_server(&server_pid, sm_fd);
-                    break;
-                case SVR_STOP:
-                    printf("SVR_STOP received\n");
-                    stop_server(&server_pid, sm_fd);
-                    break;
-                default:
-                    printf("unknown packet type %d\n", packet_type);
-                    break;
-            }
-        }
-
-        if(fds[1].revents & POLLIN)
-        {
-            char dummy;
-            read(fds[1].fd, &dummy, 1);
-            printf("child process detected as terminated\n");
-            if(waitpid(server_pid, NULL, WNOHANG) > 0)
-            {
-                send_svr_offline(sm_fd);
-                server_pid = -1;
-            }
-        }
-    }
-
-    // child_id = fork();
-    // if(child_id == -1)
-    // {
-    //     fprintf(stderr, "fork() failed\n");
-    //     return 1;
-    // }
-    // if(child_id == 0)
-    // {
-    //     execl(SERVER_PATH, SERVER_PROG_NAME, PORT_FLAG, SERVER_PORT, NULL);
-    //     printf("exec failed\n");
-    //     exit(1);    // exec failed;
-    // }
-    // else
-    // {
-    //     server_pid = child_id;
-    //     // child_exists = 1;
-    //     // printf("child exist: %d | child id = %d \n", child_exists, child_id);
-    // }
-}
+// int server_loop(int sm_fd, int pipe_read_end)
+// {
+//     char          fd_string[MAX_CONNECTED_CLIENTS + 4];
+//     struct pollfd fds[2];
+//     pid_t         server_pid = -1;    // tracking server process ID
+//     fds[0].fd                = sm_fd;
+//     fds[0].events            = POLLIN;
+//     fds[1].fd                = pipe_read_end;
+//     fds[1].events            = POLLIN;
+//
+//     // int  child_id;g
+//
+//     // int  child_exists;
+//     printf("Inside server loop\n");
+//     snprintf(fd_string, sizeof(fd_string), "%d", sm_fd);
+//     setenv("SM_FD", fd_string, 1);
+//     // Need to wrap in some sort of loop here to read from server manager, if start -> exec the server, if stop -> kill the child (milestone3)
+//     // but don't fork a server is child already exists, and if stopping but not server -> no effect
+//
+//     while(running)
+//     {
+//         int poll_count = poll(fds, 2, -1);
+//         if(poll_count == -1)
+//         {
+//             if(errno == EINTR)
+//             {
+//                 continue;
+//             }
+//             perror("poll() failed");
+//             continue;
+//         }
+//
+//         if(fds[0].revents & POLLIN)
+//         {
+//             int packet_type = handle_sm_packet(sm_fd);
+//             switch(packet_type)
+//             {
+//                 case SVR_START:
+//                     printf("SVR_START received\n");
+//                     start_server(&server_pid, sm_fd);
+//                     break;
+//                 case SVR_STOP:
+//                     printf("SVR_STOP received\n");
+//                     stop_server(&server_pid, sm_fd);
+//                     break;
+//                 default:
+//                     printf("unknown packet type %d\n", packet_type);
+//                     break;
+//             }
+//         }
+//
+//         if(fds[1].revents & POLLIN)
+//         {
+//             char dummy;
+//             read(fds[1].fd, &dummy, 1);
+//             printf("child process detected as terminated\n");
+//             if(waitpid(server_pid, NULL, WNOHANG) > 0)
+//             {
+//                 send_svr_offline(sm_fd);
+//                 server_pid = -1;
+//             }
+//         }
+//     }
+//
+//     // child_id = fork();
+//     // if(child_id == -1)
+//     // {
+//     //     fprintf(stderr, "fork() failed\n");
+//     //     return 1;
+//     // }
+//     // if(child_id == 0)
+//     // {
+//     //     execl(SERVER_PATH, SERVER_PROG_NAME, PORT_FLAG, SERVER_PORT, NULL);
+//     //     printf("exec failed\n");
+//     //     exit(1);    // exec failed;
+//     // }
+//     // else
+//     // {
+//     //     server_pid = child_id;
+//     //     // child_exists = 1;
+//     //     // printf("child exist: %d | child id = %d \n", child_exists, child_id);
+//     // }
+// }
 
 int retrieve_sm_fd(int *sm_fd_holder)
 {
@@ -384,6 +389,11 @@ int read_sm_header(int sock_fd, ServerManagerHeader *header)
     char    buffer[SERVER_MANAGER_HEADER_SIZE];
     ssize_t bytes_read = read(sock_fd, buffer, SERVER_MANAGER_HEADER_SIZE);
 
+    if(bytes_read == 0)
+    {
+        fprintf(stderr, "Connection closed by server manager\n");
+        return -1;
+    }
     if(bytes_read != SERVER_MANAGER_HEADER_SIZE)
     {
         perror("Failed to read header");
