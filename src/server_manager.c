@@ -132,11 +132,18 @@ void pickle_server_manager_header(char *arr, const ServerManagerHeader *hd)
     memcpy(arr + 2, &host_order_payload_len, sizeof(host_order_payload_len));
 }
 
-int server_loop(int sm_fd)
+int server_loop(int sm_fd, int pipe_read_end)
 {
+    char          fd_string[MAX_CONNECTED_CLIENTS + 4];
+    struct pollfd fds[2];
+    pid_t         server_pid = -1;    // tracking server process ID
+    fds[0].fd                = sm_fd;
+    fds[0].events            = POLLIN;
+    fds[1].fd                = pipe_read_end;
+    fds[1].events            = POLLIN;
+
     // int  child_id;g
-    char  fd_string[MAX_CONNECTED_CLIENTS + 4];
-    pid_t server_pid = -1;    // tracking server process ID
+
     // int  child_exists;
     printf("Inside server loop\n");
     snprintf(fd_string, sizeof(fd_string), "%d", sm_fd);
@@ -146,22 +153,42 @@ int server_loop(int sm_fd)
 
     while(1)
     {
-        int packet_type;
-        packet_type = handle_sm_packet(sm_fd);
-
-        switch(packet_type)
+        int poll_count = poll(fds, 2, -1);
+        if(poll_count == -1)
         {
-            case SVR_START:
-                printf("SVR_START received\n");
-                start_server(&server_pid, sm_fd);
-                break;
-            case SVR_STOP:
-                printf("SVR_STOP received\n");
-                stop_server(&server_pid, sm_fd);
-                break;
-            default:
-                printf("unknown packet type %d\n", packet_type);
-                break;
+            perror("poll() failed");
+            continue;
+        }
+
+        if(fds[0].revents & POLLIN)
+        {
+            int packet_type = handle_sm_packet(sm_fd);
+            switch(packet_type)
+            {
+                case SVR_START:
+                    printf("SVR_START received\n");
+                    start_server(&server_pid, sm_fd);
+                    break;
+                case SVR_STOP:
+                    printf("SVR_STOP received\n");
+                    stop_server(&server_pid, sm_fd);
+                    break;
+                default:
+                    printf("unknown packet type %d\n", packet_type);
+                    break;
+            }
+        }
+
+        if(fds[1].revents & POLLIN)
+        {
+            char dummy;
+            read(fds[1].fd, &dummy, 1);
+            printf("child process detected as terminated\n");
+            if(waitpid(server_pid, NULL, WNOHANG) > 0)
+            {
+                send_svr_offline(sm_fd);
+                server_pid = -1;
+            }
         }
     }
 
@@ -274,7 +301,7 @@ int stop_server(pid_t *server_pid, int fd)
     {
         printf("stopping server with PID: %d\n", *server_pid);
 
-        if(kill(*server_pid, SIGTERM) == 0)
+        if(kill(*server_pid, SIGINT) == 0)
         {
             waitpid(*server_pid, NULL, 0);
             printf("server stopped successfully.\n");
@@ -291,7 +318,6 @@ int stop_server(pid_t *server_pid, int fd)
     {
         printf("no server to stop\n");
     }
-    send_svr_offline(fd);
     return 0;
 }
 

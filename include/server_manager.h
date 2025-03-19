@@ -23,7 +23,7 @@ typedef struct
 int  server_manager_connect(int sock_fd, const struct sockaddr_in *sm_addr, const volatile sig_atomic_t *running);
 void server_manager_disconnect(int sock_fd);
 int  send_user_count(int sock_fd, uint16_t user_count);
-int  server_loop(int sm_fd);
+int  server_loop(int sm_fd, int pipe_read_end);
 int  retrieve_sm_fd(int *sm_fd_holder);
 int  create_sm_diagnostic_thread(pthread_t *thread, int sm_fd, uint16_t *user_count_ptr, const volatile sig_atomic_t *running);
 int  start_server(pid_t *server_pid, int fd);
