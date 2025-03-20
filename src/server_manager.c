@@ -13,7 +13,7 @@
 
 #define SERVER_PATH "./build/main"
 #define SERVER_PROG_NAME "main"
-#define SERVER_PORT "8000"
+#define SERVER_PORT "8080"
 #define PORT_FLAG "-p"
 
 #define DIAGNOSTIC_DELAY 10

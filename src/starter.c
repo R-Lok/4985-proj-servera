@@ -11,7 +11,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define DEFAULT_PORT 8080
+#define DEFAULT_PORT 9000
 
 // set sys err (check this function for header building)
 // get server manager running on computer and use wireshark
