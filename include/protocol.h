@@ -7,7 +7,7 @@
 #include <signal.h>
 #include <stddef.h>
 
-#define PROTOCOL_VERSION 2
+#define PROTOCOL_VERSION 3
 #define SYSTEM_ID 0
 #define EXTRA_BYTES_FOR_BER_AND_LENGTH 2
 #define MAX_CONNECTED_CLIENTS 1024    // max number of connected clients (can change to dynamic resize later if required)
@@ -54,7 +54,7 @@
 #define PAYLOAD_READ_BUF_SIZE 1024
 
 // Packet types for Server-Manager
-#define USR_COUNT 10
+#define SVR_Diagnostic 10
 #define SVR_ONLINE 12
 #define SVR_OFFLINE 13
 

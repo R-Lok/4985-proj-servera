@@ -25,6 +25,8 @@ typedef struct
     // cppcheck-suppress unusedStructMember
     uint16_t num_clients;    // Just tracking the number of connected clients (don't have to be logged in)
     // cppcheck-suppress unusedStructMember
+    uint32_t num_messages;
+    // cppcheck-suppress unusedStructMember
     DBM *user_db;
     // cppcheck-suppress unusedStructMember
     DBM *metadata_db;

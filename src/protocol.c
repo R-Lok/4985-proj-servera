@@ -466,8 +466,9 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, volatile sig_atomi
     strcpy(user_db_filename, "user_db");
     strcpy(metadata_db_filename, "metadata_db");
 
-    sd.num_clients = 0;
-    ret            = EXIT_SUCCESS;
+    sd.num_clients  = 0;
+    sd.num_messages = 0;
+    ret             = EXIT_SUCCESS;
 
     sd.user_db     = dbm_open(user_db_filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     sd.metadata_db = dbm_open(metadata_db_filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
@@ -502,7 +503,7 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, volatile sig_atomi
     }
     printf("smfd: %d", sm_fd);
 
-    if(create_sm_diagnostic_thread(&thread, sm_fd, &sd.num_clients, running))
+    if(create_sm_diagnostic_thread(&thread, sm_fd, &sd.num_clients, &sd.num_messages, running))
     {
         return 1;
     }

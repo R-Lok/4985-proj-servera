@@ -22,6 +22,7 @@ typedef struct
 {
     int                          fd;
     uint16_t                    *usr_count_ptr;
+    uint32_t                    *msg_count_ptr;
     const volatile sig_atomic_t *running;
 } ThreadArgs;
 
@@ -67,7 +68,7 @@ void server_manager_disconnect(int sock_fd)
     }
 }
 
-int send_user_count(int sock_fd, uint16_t user_count)
+int send_user_count(int sock_fd, uint16_t user_count, uint32_t msg_count)    // named sender user count, but also includes the message count
 {
     ServerManagerHeader smh;
     char               *header;
@@ -75,14 +76,15 @@ int send_user_count(int sock_fd, uint16_t user_count)
     char               *message;
     int                 ret;
     uint16_t            user_count_network_order;
-    PayloadField        pf;
+    uint32_t            msg_count_network_order;
+    PayloadField        payload_fields[2];
 
     ret = 0;
 
     // Construct the header
-    smh.packet_type  = USR_COUNT;           // packet for user count
-    smh.protocol_ver = PROTOCOL_VERSION;    // protocol version
-    smh.payload_len  = (uint16_t)(sizeof(user_count) + EXTRA_BYTES_FOR_BER_AND_LENGTH);
+    smh.packet_type  = SVR_Diagnostic;                                                                                         // packet for user count
+    smh.protocol_ver = PROTOCOL_VERSION;                                                                                       // protocol version
+    smh.payload_len  = (uint16_t)(sizeof(user_count) + sizeof(msg_count) + (uint32_t)(EXTRA_BYTES_FOR_BER_AND_LENGTH * 2));    // 2 fields
 
     // Allocate space for header
     header = (char *)malloc(SERVER_MANAGER_HEADER_SIZE);
@@ -96,12 +98,16 @@ int send_user_count(int sock_fd, uint16_t user_count)
     pickle_server_manager_header(header, &smh);
 
     user_count_network_order = htons(user_count);
+    msg_count_network_order  = htonl(msg_count);
     // Fill payload
-    pf.data            = &user_count_network_order;
-    pf.ber_tag         = P_INTEGER;
-    pf.data_size_bytes = sizeof(user_count);
+    payload_fields[0].data            = &user_count_network_order;
+    payload_fields[0].ber_tag         = P_INTEGER;
+    payload_fields[0].data_size_bytes = sizeof(user_count);
+    payload_fields[1].data            = &msg_count_network_order;
+    payload_fields[1].ber_tag         = P_INTEGER;
+    payload_fields[1].data_size_bytes = sizeof(msg_count);
 
-    payload = construct_payload(&pf, 1, smh.payload_len);
+    payload = construct_payload(payload_fields, 2, smh.payload_len);
     if(payload == NULL)
     {
         ret = 1;
@@ -242,7 +248,7 @@ int retrieve_sm_fd(int *sm_fd_holder)
     return -1;    // ENV VAR missing
 }
 
-int create_sm_diagnostic_thread(pthread_t *thread, int sm_fd, uint16_t *user_count_ptr, const volatile sig_atomic_t *running)
+int create_sm_diagnostic_thread(pthread_t *thread, int sm_fd, uint16_t *user_count_ptr, uint32_t *msg_count_ptr, const volatile sig_atomic_t *running)
 {
     ThreadArgs *ta = (ThreadArgs *)malloc(sizeof(ThreadArgs));
     if(!ta)
@@ -252,6 +258,7 @@ int create_sm_diagnostic_thread(pthread_t *thread, int sm_fd, uint16_t *user_cou
     }
     ta->fd            = sm_fd;
     ta->usr_count_ptr = user_count_ptr;
+    ta->msg_count_ptr = msg_count_ptr;
     ta->running       = running;
 
     if(pthread_create(thread, NULL, thread_send_usrcount, (void *)ta))
@@ -271,7 +278,7 @@ void *thread_send_usrcount(void *args)
     while((*ta->running) == 1)
     {
         // printf("Thread running...\n");
-        send_user_count(ta->fd, *ta->usr_count_ptr);
+        send_user_count(ta->fd, *ta->usr_count_ptr, *ta->msg_count_ptr);
         sleep(DIAGNOSTIC_DELAY);
     }
     printf("Thread exiting...%d\n", *ta->running);
