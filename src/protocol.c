@@ -578,8 +578,13 @@ static void remove_pollfd(struct pollfd *clients, nfds_t index, nfds_t num_clien
         fprintf(stderr, "Failed to close client socket - %s\n", strerror(errno));
     }
     // copy fd of last element in array to this index. Set fd of the (previously) last element to -1 (poll ignores -1)
-    clients[index].fd           = clients[num_clients - 1].fd;
-    clients[num_clients - 1].fd = -1;
+    clients[index].fd      = clients[num_clients - 1].fd;
+    clients[index].revents = clients[num_clients - 1].revents;
+    clients[index].events  = clients[num_clients - 1].events;
+
+    clients[num_clients - 1].fd      = -1;
+    clients[num_clients - 1].revents = 0;
+    clients[num_clients - 1].events  = 0;
 }
 
 static void handle_disconnect_events(ServerData *sd)
