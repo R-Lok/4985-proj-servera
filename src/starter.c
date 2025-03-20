@@ -24,7 +24,8 @@ static volatile sig_atomic_t ss_running = 1;
 static int *pipe_write_end;
 void        handle_signal(int signal);
 void        sigchld_handler(int sig);
-void        server_loop(int sm_fd, int pipe_read_end);
+int         server_loop(int sm_fd, int pipe_read_end);
+int         set_cloexec(int fd);
 
 int main(int argc, char **argv)
 {
@@ -53,7 +54,6 @@ int main(int argc, char **argv)
     sigaction(SIGCHLD, &sa, NULL);
 
     sm_port = DEFAULT_PORT;
-    ret     = 0;
     signal(SIGINT, handle_signal);
 
     if(parse_addr(argc, argv, &sm_port, ipv4))
@@ -68,25 +68,26 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    sock_fd = socket(sm_addr.sin_family, SOCK_STREAM, 0);    // NOLINT(android-cloexec-socket)
-    if(sock_fd == -1)
-    {
-        fprintf(stderr, "Error calling socket()\n");
-        exit(EXIT_FAILURE);
-    }
-
-    if(pipe2(child_pipe, O_CLOEXEC | O_NONBLOCK) == -1)
+    if(pipe(child_pipe) == -1)    // NOLINT(android-cloexec-pipe)
     {
         perror("Error creating pipe");
         exit(EXIT_FAILURE);
     }
-    pipe_write_end = &child_pipe[1];
-    if(server_manager_connect(sock_fd, &sm_addr, &ss_running))
+    if(set_cloexec(child_pipe[0]) || set_cloexec(child_pipe[1]))
     {
-        goto end;    // SIGINT received
+        fprintf(stderr, "Failed to set pipes to CLOEXEC\n");
+        exit(EXIT_FAILURE);
     }
 
-    server_loop(sock_fd, child_pipe[0]);    // temp, needs to capture return value
+    pipe_write_end = &child_pipe[1];
+    sock_fd        = server_manager_connect(&sm_addr, &ss_running);
+    if(sock_fd == -1 || sock_fd == 0)
+    {
+        ret = 1;
+        goto end;    // SIGINT received, or error creating socket
+    }
+
+    ret = server_loop(sock_fd, child_pipe[0]);    // temp, needs to capture return value
 
     printf("Server starter closing...\n");
 end:
@@ -116,7 +117,7 @@ void sigchld_handler(int sig)
     }
 }
 
-void server_loop(int sm_fd, int pipe_read_end)
+int server_loop(int sm_fd, int pipe_read_end)
 {
     char          fd_string[MAX_CONNECTED_CLIENTS + 4];
     struct pollfd fds[2];
@@ -140,12 +141,13 @@ void server_loop(int sm_fd, int pipe_read_end)
         int poll_count = poll(fds, 2, -1);
         if(poll_count == -1)
         {
+            perror("poll() failed");
             if(errno == EINTR)
             {
                 continue;
             }
-            perror("poll() failed");
-            continue;
+            ss_running = 0;
+            break;
         }
 
         if(fds[0].revents & POLLIN)
@@ -154,8 +156,12 @@ void server_loop(int sm_fd, int pipe_read_end)
 
             if(packet_type == -1)
             {
+                if(server_pid != -1)
+                {    // kill child if exists
+                    kill(server_pid, SIGINT);
+                }
                 fprintf(stderr, "Connection lost, shutting down server starter...\n");
-                break;
+                return 1;
             }
             switch(packet_type)
             {
@@ -185,7 +191,7 @@ void server_loop(int sm_fd, int pipe_read_end)
             }
         }
     }
-
+    return 0;
     // child_id = fork();
     // if(child_id == -1)
     // {
@@ -204,4 +210,21 @@ void server_loop(int sm_fd, int pipe_read_end)
     //     // child_exists = 1;
     //     // printf("child exist: %d | child id = %d \n", child_exists, child_id);
     // }
+}
+
+int set_cloexec(int fd)
+{
+    int flags = fcntl(fd, F_GETFD);    // Get current flags
+    if(flags == -1)
+    {
+        perror("failed to retrieve fd flags");
+        return 1;
+    }
+
+    if(fcntl(fd, F_SETFD, flags | FD_CLOEXEC) == -1)
+    {    // Set FD_CLOEXEC
+        perror("failed to set fd flags");
+        return 1;
+    }
+    return 0;
 }

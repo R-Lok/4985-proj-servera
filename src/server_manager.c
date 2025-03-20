@@ -29,26 +29,34 @@ void pickle_server_manager_header(char *arr, const ServerManagerHeader *hd);
 
 void *thread_send_usrcount(void *args);
 
-int server_manager_connect(int sock_fd, const struct sockaddr_in *sm_addr, const volatile sig_atomic_t *running)
+int server_manager_connect(const struct sockaddr_in *sm_addr, const volatile sig_atomic_t *running)
 {
     const uint8_t RETRY_TIME = 5;
-    int           connected;
-    int           ret = 1;
-    connected         = 0;
-    while(*running == 1 && connected == 0)
+    int           sock_fd;
+
+    sock_fd = socket(sm_addr->sin_family, SOCK_STREAM, 0);    // NOLINT(android-cloexec-socket)
+    if(sock_fd == -1)
+    {
+        fprintf(stderr, "Error calling socket() in server_manager_connect\n");
+        return -1;
+    }
+    while(*running == 1)
     {
         printf("Attempting to connect to server manager..\n");
         if(connect(sock_fd, (const struct sockaddr *)sm_addr, sizeof(*(sm_addr))) == 0)
         {
-            connected = 1;
-            ret       = 0;
+            return sock_fd;
         }
-        else
+        close(sock_fd);
+        sock_fd = socket(sm_addr->sin_family, SOCK_STREAM, 0);    // NOLINT(android-cloexec-socket)
+        if(sock_fd == -1)
         {
-            sleep(RETRY_TIME);
+            fprintf(stderr, "Error calling socket() in server_manager_connect\n");
+            return -1;
         }
+        sleep(RETRY_TIME);
     }
-    return ret;
+    return sock_fd;
 }
 
 void server_manager_disconnect(int sock_fd)
@@ -322,6 +330,7 @@ int stop_server(pid_t *server_pid, int fd)
     else
     {
         printf("no server to stop\n");
+        send_svr_offline(fd);
     }
     return 0;
 }
@@ -386,17 +395,14 @@ int send_svr_offline(int fd)
 
 int read_sm_header(int sock_fd, ServerManagerHeader *header)
 {
-    char    buffer[SERVER_MANAGER_HEADER_SIZE];
-    ssize_t bytes_read = read(sock_fd, buffer, SERVER_MANAGER_HEADER_SIZE);
+    char buffer[SERVER_MANAGER_HEADER_SIZE];
+    int  read_res;
 
-    if(bytes_read == 0)
+    read_res = read_fully(sock_fd, buffer, SERVER_MANAGER_HEADER_SIZE);
+
+    if(read_res == 2)    // consider also handling the other error returns
     {
         fprintf(stderr, "Connection closed by server manager\n");
-        return -1;
-    }
-    if(bytes_read != SERVER_MANAGER_HEADER_SIZE)
-    {
-        perror("Failed to read header");
         return -1;
     }
 
@@ -419,3 +425,10 @@ int handle_sm_packet(int sock_fd)
     }
     return header.packet_type;
 }
+
+// int handle_sm_disconnect(int server_pid, int sm_fd) //need to think about this, leave for milestone5
+// {
+//     close(sm_fd);
+//     kill(server_pid, SIGINT);
+//     execvp("./build/starter", )
+// }

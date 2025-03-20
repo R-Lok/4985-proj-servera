@@ -20,7 +20,7 @@ typedef struct
     uint16_t payload_len;
 } ServerManagerHeader;
 
-int  server_manager_connect(int sock_fd, const struct sockaddr_in *sm_addr, const volatile sig_atomic_t *running);
+int  server_manager_connect(const struct sockaddr_in *sm_addr, const volatile sig_atomic_t *running);
 void server_manager_disconnect(int sock_fd);
 int  send_user_count(int sock_fd, uint16_t user_count);
 // void server_loop(int sm_fd, int pipe_read_end);
