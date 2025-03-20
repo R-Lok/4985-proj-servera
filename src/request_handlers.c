@@ -137,6 +137,9 @@ int handle_logout(HandlerArgs *args, int fd)
         args->sd->fd_map[fd].uid = 0;
         // Close the file descriptor as they have logged out
         close(fd);    // consider if this needs further error handling.
+    } else {
+        send_sys_error(fd, P_BAD_REQUEST, "P_BAD_REQUEST_MSG");
+        close(fd); //Close their socket for attempting to log someone else out (assume malicious)
     }
     return 0;
 }
