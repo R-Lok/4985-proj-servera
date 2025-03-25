@@ -11,7 +11,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define DEFAULT_PORT 9000
+#define DEFAULT_SM_PORT 9000
 
 // set sys err (check this function for header building)
 // get server manager running on computer and use wireshark
@@ -53,7 +53,7 @@ int main(int argc, char **argv)
     sa.sa_flags = SA_RESTART;
     sigaction(SIGCHLD, &sa, NULL);
 
-    sm_port = DEFAULT_PORT;
+    sm_port = DEFAULT_SM_PORT;
     signal(SIGINT, handle_signal);
 
     if(parse_addr(argc, argv, &sm_port, ipv4))

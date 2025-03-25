@@ -8,6 +8,7 @@
         "unistd.h": "c",
         "ratio": "c",
         "server_manager.h": "c",
-        "protocol.h": "c"
+        "protocol.h": "c",
+        "user.h": "c"
     }
 }

@@ -13,7 +13,7 @@
 
 #define SERVER_PATH "./build/main"
 #define SERVER_PROG_NAME "main"
-#define SERVER_PORT "8080"
+#define SERVER_PORT "8000"
 #define PORT_FLAG "-p"
 
 #define DIAGNOSTIC_DELAY 10
@@ -325,6 +325,7 @@ int stop_server(pid_t *server_pid, int fd)
         {
             waitpid(*server_pid, NULL, 0);
             printf("server stopped successfully.\n");
+            send_svr_offline(fd);
         }
         else
         {
