@@ -501,7 +501,7 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, volatile sig_atomi
         free(sd.fd_map);
         return 1;
     }
-    printf("smfd: %d", sm_fd);
+    printf("smfd: %d\n", sm_fd);
 
     if(create_sm_diagnostic_thread(&thread, sm_fd, &sd.num_clients, &sd.num_messages, running))
     {
@@ -556,7 +556,7 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, volatile sig_atomi
     // close all remaining client fds - need to consider - will there be server message sent to clients
     // indicating the server is shutting down? (future consideration)
     *running = 0;
-    pthread_join(thread, NULL);    // Wait for thread to clean itself up
+    pthread_cancel(thread);    // Wait for thread to clean itself up
     for(nfds_t i = 0; i < sd.num_clients; i++)
     {
         close(sd.clients[i].fd);
@@ -567,6 +567,7 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, volatile sig_atomi
     dbm_close(sd.user_db);
     dbm_close(sd.metadata_db);
     printf("Exiting handle_connections..\n");    // debug statement, comment out at end of project.
+    fflush(stdout);
     return ret;
 }
 
