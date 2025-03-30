@@ -31,6 +31,7 @@ int setup_addr(const char *ipv4, struct sockaddr_in *my_addr, in_port_t port, in
 int setup_socket(struct sockaddr_in *my_addr, int *err)
 {
     int socket_fd;
+    int opt = 1;
 
     socket_fd = socket(my_addr->sin_family, SOCK_STREAM, 0);    // NOLINT(android-cloexec-socket)
 
@@ -38,6 +39,12 @@ int setup_socket(struct sockaddr_in *my_addr, int *err)
     {
         *err = errno;
         return -1;
+    }
+
+    if(setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
+    {
+        *err = errno;
+        goto fail;
     }
 
     if(bind(socket_fd, (struct sockaddr *)my_addr, sizeof(struct sockaddr_in)) != 0)

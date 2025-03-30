@@ -266,7 +266,6 @@ char *construct_message(const char *header, const char *payload, size_t header_l
     return msg;
 }
 
-// In the works, it's pretty much complete but the handler function pointer needs work to ensure all message types are covered.
 int handle_fd(int fd, ServerData *server_data)
 {
     int            ret;
@@ -274,6 +273,7 @@ int handle_fd(int fd, ServerData *server_data)
     char          *payload_buffer;
     int            read_header_result;
     int            read_payload_result;
+    int            res;
     HeaderData     hd;
     RequestHandler handler;
     HandlerArgs    ha;
@@ -281,10 +281,15 @@ int handle_fd(int fd, ServerData *server_data)
     payload_buffer = NULL;
 
     read_header_result = read_fully(fd, header_buffer, HEADER_SIZE);
-    if(handle_read_request_res(read_header_result, fd) == CLIENT_DISCONNECTED)
+
+    res = handle_read_request_res(read_header_result, fd);
+    if(res == CLIENT_DISCONNECTED)
     {
-        ret = 2;
-        goto end;
+        return 0;
+    }
+    if(res == 1)
+    {
+        return 1;
     }
 
     extract_header(header_buffer, &hd);
@@ -331,7 +336,6 @@ bad_req:
     {
         free(payload_buffer);
     }
-end:
     return ret;
 }
 
@@ -351,11 +355,12 @@ char *malloc_payload_buffer(uint16_t payload_len)
 int handle_read_request_res(int res, int fd)
 {
     if(res == TIMEOUT)
-    {    // error handling here a bit dodgy, revisit later
+    {
         if(send_sys_error(fd, P_TIMEOUT, P_TIMEOUT_MSG))
         {
             return 1;
         }
+        return 0;
     }
     if(res == READ_ERROR)
     {
@@ -445,7 +450,7 @@ int send_cht_received(int fd, uint16_t sender_id)
 
     pickle_header(header, &hd);
 
-    if(write_fully(fd, header, (size_t)HEADER_SIZE) == WRITE_ERROR)    // need to also handle TIMEOUT (send sys error to indicate timeout)
+    if(write_fully(fd, header, (size_t)HEADER_SIZE) == WRITE_ERROR)
     {
         fprintf(stderr, "Error sending cht_received\n");
         return 1;
@@ -453,7 +458,6 @@ int send_cht_received(int fd, uint16_t sender_id)
     return 0;
 }
 
-// This function is really long, I will probably try to abstract it later, but most of the length is due to setting things up, locking, error handling
 int handle_connections(int sock_fd, struct sockaddr_in *addr, volatile sig_atomic_t *running)
 {
     int        ret;
@@ -522,7 +526,7 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, volatile sig_atomi
             if(errno != EINTR && errno != EAGAIN && errno != ECONNABORTED)    // if it's none of the acceptable errors, exit
             {
                 fprintf(stderr, "accept() error\n");
-                ret = 1;
+                ret = EXIT_FAILURE;
                 break;
             }
         }
@@ -547,11 +551,11 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, volatile sig_atomi
         handle_disconnect_events(&sd);    // goes through array to check for disconnects
 
         handle_pollins(&sd);
-        // if(check_pollins(&sd))
-        // {
-        //     ret = EXIT_FAILURE;
-        //     break;
-        // }
+        if(handle_pollins(&sd) == 1)
+        {
+            *running = 0;
+            ret      = EXIT_FAILURE;
+        }
     }
     // close all remaining client fds - need to consider - will there be server message sent to clients
     // indicating the server is shutting down? (future consideration)
@@ -614,9 +618,9 @@ static int handle_pollins(ServerData *sd)
     {
         if(sd->clients[i].revents & POLLIN)
         {
-            if(handle_fd(sd->clients[i].fd, sd) == 2)
+            if(handle_fd(sd->clients[i].fd, sd) == 1)
             {
-                // close(sd->clients[i].fd);
+                return 1;
             }
         }
     }

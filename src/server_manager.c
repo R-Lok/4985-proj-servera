@@ -433,10 +433,3 @@ int handle_sm_packet(int sock_fd)
     }
     return header.packet_type;
 }
-
-// int handle_sm_disconnect(int server_pid, int sm_fd) //need to think about this, leave for milestone5
-// {
-//     close(sm_fd);
-//     kill(server_pid, SIGINT);
-//     execvp("./build/starter", )
-// }
