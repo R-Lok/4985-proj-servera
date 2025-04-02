@@ -7,13 +7,14 @@
 
 // in ms, can lower. Timeout exists cause imagine: client states their payload is 20 bytes in header, but actually
 // 18 bytes. We would get stuck on read forever if we do not time out their request.
-#define TIMEOUT_DURATION 100
+#define TIMEOUT_DURATION 6000
 #define MS_PER_SECOND 1000
 
 int read_fully(int fd, char *buffer, size_t bytes_to_read)
 {
     clock_t start_tick;
     size_t  tread;
+    // printf("wanting to read %zu bytes\n", bytes_to_read);
     tread      = 0;
     start_tick = clock();    // Start the timer. We are measuring using clock ticks. It doesn't matter if the timeout is EXACTLY 100ms.
 
@@ -23,11 +24,12 @@ int read_fully(int fd, char *buffer, size_t bytes_to_read)
         clock_t current_tick;
         double  elapsed_time_ms;
 
+        // printf("read %zu bytes\n", tread);
         current_tick    = clock();    // Get current tick.
         elapsed_time_ms = (double)(current_tick - start_tick) * MS_PER_SECOND / CLOCKS_PER_SEC;
         if(elapsed_time_ms > TIMEOUT_DURATION)    // If beyond timeout, then return TIMEOUT.
         {
-            printf("Timed Out fd:%d\n", fd);
+            printf("Timed Out fd:%d | elapsed time: %f\n", fd, elapsed_time_ms);
             return TIMEOUT;
         }
         nread = read(fd, buffer + tread, bytes_to_read - tread);
@@ -36,6 +38,10 @@ int read_fully(int fd, char *buffer, size_t bytes_to_read)
             if(errno == EINTR || errno == EAGAIN)
             {
                 continue;
+            }
+            if(errno == EBADF)
+            {
+                return CLIENT_DISCONNECTED;
             }
             fprintf(stderr, "read() error - %s\n", strerror(errno));
             return READ_ERROR;

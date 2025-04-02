@@ -103,7 +103,6 @@ int handle_acc_create(HandlerArgs *args, int fd)
     printf("acc create:%s:%s | remaining bytes: %u\n", username, password, remaining_bytes);    // remove this later;
 
     // call try_acc_create() -> first check if key (username) already exists, if it does, return some err number,
-    // also consider empty passwords (nothing - maybe store password as just 1 NUL byte? or maybe return error? not sure - will have to discuss with clients)
     // if ok to create that account, create the account and return 0 (success)
     // send sys_success on successful creation, sys_error on failure (username already taken)
     if(try_acc_create(args->sd->user_db, args->sd->metadata_db, username, password))
@@ -123,8 +122,7 @@ int handle_acc_create(HandlerArgs *args, int fd)
 
 /**
  * Issue with handling logouts is that the main poll loop is already polling for disconnect events, the fd might be cleaned up
- * before this request is even read. I'll think about it more in milestone 2. There should be no major issues even with the current
- * design apart from maybe the fd_map position not being cleaned to NUL and 0.
+ * before this request is even read.
  */
 int handle_logout(HandlerArgs *args, int fd)
 {
@@ -136,7 +134,7 @@ int handle_logout(HandlerArgs *args, int fd)
         // set uid of that position in the map as 0
         args->sd->fd_map[fd].uid = 0;
         // Close the file descriptor as they have logged out
-        close(fd);    // consider if this needs further error handling.
+        close(fd);
     }
     else
     {

@@ -130,7 +130,7 @@ int send_sys_error(int fd, uint8_t err_code, const char *err_msg)
         goto message_fail;
     }
 
-    if(write_fully(fd, message, (size_t)HEADER_SIZE + hd.payload_len) == WRITE_ERROR)    // need to also handle TIMEOUT (send sys error to indicate timeout)
+    if(write_fully(fd, message, (size_t)HEADER_SIZE + hd.payload_len) == WRITE_ERROR)
     {
         fprintf(stderr, "Error sending sys error\n");
         ret = 1;
@@ -196,7 +196,7 @@ int send_sys_success(int fd, uint8_t packet_type)
         goto message_fail;
     }
 
-    if(write_fully(fd, message, (size_t)HEADER_SIZE + hd.payload_len) == WRITE_ERROR)    // need to also handle TIMEOUT (send sys error to indicate timeout)
+    if(write_fully(fd, message, (size_t)HEADER_SIZE + hd.payload_len) == WRITE_ERROR)
     {
         fprintf(stderr, "Error sending sys success\n");
         ret = 1;
@@ -226,8 +226,8 @@ void pickle_header(char *arr, const HeaderData *hd)
 ALSO MAKE SURE THAT payload_len ACCOUNTS FOR THE BYTES NEEDED BY THE BER TAG + BER LENGTH */
 char *construct_payload(PayloadField *payload_fields, size_t num_fields, size_t payload_len)
 {
-    // This function may be hard to wrap your head around - I'm just iterating through all the PayloadField structs, and writing them into the
-    // payload buffer. This works regardless of data type cause the struct uses a void pointer to point to the data. It makes this function reuseable.
+    // I'm just iterating through all the PayloadField structs, and writing them into the payload buffer.
+    // This works regardless of data type cause the struct uses a void pointer to point to the data. It makes this function reuseable.
     char *payload;
     char *payload_ptr_copy;
 
@@ -283,8 +283,12 @@ int handle_fd(int fd, ServerData *server_data)
     read_header_result = read_fully(fd, header_buffer, HEADER_SIZE);
 
     res = handle_read_request_res(read_header_result, fd);
-    if(res == CLIENT_DISCONNECTED)
+    if(res == CLIENT_DISCONNECTED || res == TIMEOUT)
     {
+        if(res == CLIENT_DISCONNECTED)
+        {
+            close(fd);
+        }
         return 0;
     }
     if(res == 1)
@@ -294,9 +298,9 @@ int handle_fd(int fd, ServerData *server_data)
 
     extract_header(header_buffer, &hd);
 
-    if(hd.payload_len != 0)
+    if(hd.payload_len != 0)    // Only run this logic if payload length is not 0 (there is payload)
     {
-        payload_buffer = malloc_payload_buffer(hd.payload_len);    // need to handle if payload_len is 0 (no payload - will cause issues i think)
+        payload_buffer = malloc_payload_buffer(hd.payload_len);
         if(payload_buffer == NULL)
         {
             return 1;
@@ -309,6 +313,7 @@ int handle_fd(int fd, ServerData *server_data)
             goto bad_req;
         }
     }
+    // printf("Checking header..\n");
     if(is_valid_header(&hd) == 0)
     {
         fprintf(stderr, "invalid header received\n");
@@ -321,7 +326,7 @@ int handle_fd(int fd, ServerData *server_data)
     handler = get_handler_function(hd.packet_type);
     if(handler == NULL)
     {
-        fprintf(stdout, "Sending P_BAD_REQUEST - Bad Packet Type\n");    // comment out if not debugging
+        fprintf(stdout, "Sending P_BAD_REQUEST - Bad Packet Type\n");
         send_sys_error(fd, P_BAD_REQUEST, P_BAD_REQUEST_MSG);
         ret = 0;
         goto bad_req;
@@ -360,7 +365,7 @@ int handle_read_request_res(int res, int fd)
         {
             return 1;
         }
-        return 0;
+        return 3;
     }
     if(res == READ_ERROR)
     {
@@ -424,7 +429,7 @@ int send_login_success(int fd, uint16_t uid)
         goto message_fail;
     }
 
-    if(write_fully(fd, message, (size_t)HEADER_SIZE + hd.payload_len) == WRITE_ERROR)    // need to also handle TIMEOUT (send sys error to indicate timeout)
+    if(write_fully(fd, message, (size_t)HEADER_SIZE + hd.payload_len) == WRITE_ERROR)
     {
         fprintf(stderr, "Error sending sys error\n");
         ret = 1;
@@ -532,9 +537,10 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, volatile sig_atomi
         }
         else
         {
+            printf("Accepted client %d\n", client_fd);
             if(handle_new_client(client_fd, &sd))
             {
-                close(client_fd);    // I'm gonna have to think about this. Maybe send a internal server error. Will revisit.
+                close(client_fd);
             }
         }
 
@@ -557,11 +563,9 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, volatile sig_atomi
             ret      = EXIT_FAILURE;
         }
     }
-    // close all remaining client fds - need to consider - will there be server message sent to clients
-    // indicating the server is shutting down? (future consideration)
     *running = 0;
-    pthread_cancel(thread);    // Wait for thread to clean itself up
-    for(nfds_t i = 0; i < sd.num_clients; i++)
+    pthread_cancel(thread);                       // Kill the thread sending the diagnostic messages
+    for(nfds_t i = 0; i < sd.num_clients; i++)    // close all remaining client fds - need to consider - will there be server message sent to clients
     {
         close(sd.clients[i].fd);
     }
@@ -570,18 +574,13 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, volatile sig_atomi
 
     dbm_close(sd.user_db);
     dbm_close(sd.metadata_db);
-    printf("Exiting handle_connections..\n");    // debug statement, comment out at end of project.
+    printf("Exiting handle_connections..\n");
     fflush(stdout);
     return ret;
 }
 
 static void remove_pollfd(struct pollfd *clients, nfds_t index, nfds_t num_clients)
 {
-    if(close(clients[index].fd) == -1)
-    {
-        // if fail to close, can't really do anything about it anyways but print - unless we want to keep trying to close it?
-        fprintf(stderr, "Failed to close client socket - %s\n", strerror(errno));
-    }
     // copy fd of last element in array to this index. Set fd of the (previously) last element to -1 (poll ignores -1)
     clients[index].fd      = clients[num_clients - 1].fd;
     clients[index].revents = clients[num_clients - 1].revents;
@@ -600,6 +599,10 @@ static void handle_disconnect_events(ServerData *sd)
         if(sd->clients[i].revents & POLLERR || sd->clients[i].revents & POLLHUP || sd->clients[i].revents & POLLNVAL)
         {
             const int fd = sd->clients[i].fd;
+            if(sd->clients[i].revents & POLLHUP)
+            {
+                close(sd->clients[i].fd);
+            }
             printf("Error/Hangup occurred on fd %d\n - removing client..\n", sd->clients[i].fd);
 
             // close file descriptor, set uid to 0 (not logged in), zero out username
@@ -614,6 +617,7 @@ static void handle_disconnect_events(ServerData *sd)
 
 static int handle_pollins(ServerData *sd)
 {
+    // printf("handling pollins\n");
     for(nfds_t i = 0; i < sd->num_clients; i++)
     {
         if(sd->clients[i].revents & POLLIN)
@@ -622,6 +626,7 @@ static int handle_pollins(ServerData *sd)
             {
                 return 1;
             }
+            sd->clients[i].revents = 0;
         }
     }
     return 0;
