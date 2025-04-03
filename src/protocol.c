@@ -109,7 +109,7 @@ int send_sys_error(int fd, uint8_t err_code, const char *err_msg)
     // Fill in the payload fields. SYS error has two fields, so fill in two PayloadField structs. (order matters - has to match protocol)
     payload_fields[0].data            = &err_code;
     payload_fields[0].data_size_bytes = sizeof(err_code);
-    payload_fields[0].ber_tag         = P_INTEGER;
+    payload_fields[0].ber_tag         = P_ENUMERATED;
     payload_fields[1].data            = temp_err_msg;
     payload_fields[1].data_size_bytes = err_msg_len;
     payload_fields[1].ber_tag         = P_UTF8STRING;
