@@ -27,6 +27,16 @@ void        sigchld_handler(int sig);
 int         server_loop(int sm_fd, int pipe_read_end);
 int         set_cloexec(int fd);
 
+/*
+    Initializes signal handling, connects to the server manager, and starts the control loop.
+
+    @param
+    argc: Number of command-line arguments
+    argv: Array of command-line argument strings
+
+    @return
+    0 on success, 1 on failure
+*/
 int main(int argc, char **argv)
 {
     in_port_t          sm_port;
@@ -96,6 +106,12 @@ end:
     return ret;
 }
 
+/*
+    Handles SIGINT by updating the running flag to terminate the program.
+
+    @param
+    signal: Signal number received
+*/
 void handle_signal(int signal)
 {
     if(signal == SIGINT)
@@ -104,6 +120,12 @@ void handle_signal(int signal)
     }
 }
 
+/*
+    Handles SIGCHLD to clean up terminated child processes and notify the main loop.
+
+    @param
+    sig: Signal number received
+*/
 void sigchld_handler(int sig)
 {
     (void)sig;
@@ -117,6 +139,16 @@ void sigchld_handler(int sig)
     }
 }
 
+/*
+    Runs the main control loop to manage server start/stop commands and child process events.
+
+    @param
+    sm_fd: Socket connected to the server manager
+    pipe_read_end: Read end of the pipe used for SIGCHLD notifications
+
+    @return
+    0 on normal exit, 1 on connection loss
+*/
 int server_loop(int sm_fd, int pipe_read_end)
 {
     char          fd_string[MAX_CONNECTED_CLIENTS + 4];
@@ -212,6 +244,15 @@ int server_loop(int sm_fd, int pipe_read_end)
     // }
 }
 
+/*
+    Sets the FD_CLOEXEC flag on a file descriptor to close it during exec.
+
+    @param
+    fd: File descriptor to modify
+
+    @return
+    0 on success, 1 on failure
+*/
 int set_cloexec(int fd)
 {
     int flags = fcntl(fd, F_GETFD);    // Get current flags
