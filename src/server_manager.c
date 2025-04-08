@@ -30,6 +30,16 @@ void pickle_server_manager_header(char *arr, const ServerManagerHeader *hd);
 
 void *thread_send_usrcount(void *args);
 
+/*
+    Attempts to connect to the server manager, retrying until successful or termination is requested.
+
+    @param
+    sm_addr: Pointer to sockaddr_in struct with server manager address
+    running: Flag used to check if the program should keep running
+
+    @return
+    Connected socket file descriptor on success, -1 on failure
+*/
 int server_manager_connect(const struct sockaddr_in *sm_addr, const volatile sig_atomic_t *running)
 {
     const uint8_t RETRY_TIME = 5;
@@ -60,6 +70,12 @@ int server_manager_connect(const struct sockaddr_in *sm_addr, const volatile sig
     return sock_fd;
 }
 
+/*
+    Closes the socket connection to the server manager if it's valid.
+
+    @param
+    sock_fd: Socket file descriptor to close
+*/
 void server_manager_disconnect(int sock_fd)
 {
     if(sock_fd >= 0)
@@ -68,6 +84,17 @@ void server_manager_disconnect(int sock_fd)
     }
 }
 
+/*
+    Sends the current user count and message count to the server manager.
+
+    @param
+    sock_fd: Socket file descriptor for the server manager
+    user_count: Number of connected users
+    msg_count: Number of messages sent
+
+    @return
+    0 on success, 1 on error
+*/
 int send_user_count(int sock_fd, uint16_t user_count, uint32_t msg_count)    // named sender user count, but also includes the message count
 {
     ServerManagerHeader smh;
@@ -138,6 +165,13 @@ free_header:
     return ret;
 }
 
+/*
+    Serializes a ServerManagerHeader struct into a byte array.
+
+    @param
+    arr: Buffer to store the serialized header
+    hd: Pointer to the ServerManagerHeader struct to serialize
+*/
 void pickle_server_manager_header(char *arr, const ServerManagerHeader *hd)
 {
     const uint16_t host_order_payload_len = htons(hd->payload_len);
@@ -231,6 +265,15 @@ void pickle_server_manager_header(char *arr, const ServerManagerHeader *hd)
 //     // }
 // }
 
+/*
+    Retrieves the server manager file descriptor from the SM_FD environment variable.
+
+    @param
+    sm_fd_holder: Pointer to where the file descriptor should be stored
+
+    @return
+    0 on success, -1 on failure
+*/
 int retrieve_sm_fd(int *sm_fd_holder)
 {
     const int   BASE_TEN = 10;
@@ -248,6 +291,19 @@ int retrieve_sm_fd(int *sm_fd_holder)
     return -1;    // ENV VAR missing
 }
 
+/*
+    Creates a thread that periodically sends diagnostic data (user and message count) to the server manager.
+
+    @param
+    thread: Pointer to the pthread_t to store the thread ID
+    sm_fd: File descriptor for the server manager
+    user_count_ptr: Pointer to the current user count
+    msg_count_ptr: Pointer to the current message count
+    running: Flag to indicate if the thread should continue running
+
+    @return
+    0 on success, 1 on failure
+*/
 int create_sm_diagnostic_thread(pthread_t *thread, int sm_fd, uint16_t *user_count_ptr, uint32_t *msg_count_ptr, const volatile sig_atomic_t *running)
 {
     ThreadArgs *ta = (ThreadArgs *)malloc(sizeof(ThreadArgs));
@@ -269,6 +325,13 @@ int create_sm_diagnostic_thread(pthread_t *thread, int sm_fd, uint16_t *user_cou
     return 0;
 }
 
+/*
+    Thread function that sends diagnostic data to the server manager at regular intervals.
+
+    @param
+    args: Pointer to a ThreadArgs struct containing file descriptor, counters, and running flag
+
+*/
 void *thread_send_usrcount(void *args)
 {
     ThreadArgs *ta;
@@ -286,6 +349,16 @@ void *thread_send_usrcount(void *args)
     return NULL;
 }
 
+/*
+    Starts the server process if it's not already running.
+
+    @param
+    server_pid: Pointer to the PID of the server process
+    fd: File descriptor for communicating with the server manager
+
+    @return
+    0 on success, 1 on failure
+*/
 int start_server(pid_t *server_pid, int fd)
 {
     if(*server_pid > 0)
@@ -314,6 +387,16 @@ int start_server(pid_t *server_pid, int fd)
     return 0;
 }
 
+/*
+    Stops the running server process, if any.
+
+    @param
+    server_pid: Pointer to the PID of the server process
+    fd: File descriptor for communicating with the server manager
+
+    @return
+    0 on success, 1 on failure
+*/
 int stop_server(pid_t *server_pid, int fd)
 {
     printf("stopping with PID %d\n", *server_pid);
@@ -343,6 +426,15 @@ int stop_server(pid_t *server_pid, int fd)
     return 0;
 }
 
+/*
+    Sends a SVR_ONLINE message to the server manager.
+
+    @param
+    fd: File descriptor for the server manager connection
+
+    @return
+    0 on success, 1 on failure
+*/
 int send_svr_online(int fd)
 {
     ServerManagerHeader hd;
@@ -372,6 +464,15 @@ int send_svr_online(int fd)
     return 0;
 }
 
+/*
+    Sends a SVR_OFFLINE message to the server manager.
+
+    @param
+    fd: File descriptor for the server manager connection
+
+    @return
+    0 on success, 1 on failure
+*/
 int send_svr_offline(int fd)
 {
     ServerManagerHeader hd;
@@ -401,6 +502,16 @@ int send_svr_offline(int fd)
     return 0;
 }
 
+/*
+    Reads and unpacks a ServerManagerHeader from the socket.
+
+    @param
+    sock_fd: Socket file descriptor to read from
+    header: Pointer to ServerManagerHeader to populate
+
+    @return
+    0 on success, -1 if connection closed or error occurs
+*/
 int read_sm_header(int sock_fd, ServerManagerHeader *header)
 {
     char buffer[SERVER_MANAGER_HEADER_SIZE];
@@ -423,6 +534,15 @@ int read_sm_header(int sock_fd, ServerManagerHeader *header)
     return 0;
 }
 
+/*
+    Reads a packet from the server manager and returns its type.
+
+    @param
+    sock_fd: Socket file descriptor to read from
+
+    @return
+    Packet type on success, -1 on failure
+*/
 int handle_sm_packet(int sock_fd)
 {
     ServerManagerHeader header;
