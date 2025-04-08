@@ -29,6 +29,15 @@ uint16_t increment_uid(DBM *metadata_db);
 int      insert_new_user(DBM *user_db, const char *username, const char *password, uint16_t uid);
 int      try_login(DBM *user_db, SessionUser *fd_map, int fd, const char *username, const char *password);
 
+/*
+    Returns the appropriate handler function for a given packet type.
+
+    @param
+    packet_type: Type of packet received
+
+    @return
+    Corresponding handler function or NULL if unrecognized
+*/
 RequestHandler get_handler_function(uint8_t packet_type)
 {
     switch(packet_type)
@@ -47,6 +56,16 @@ RequestHandler get_handler_function(uint8_t packet_type)
     }
 }
 
+/*
+    Handles user login
+
+    @param
+    args: Pointer to HandlerArgs containing header, payload, and server data
+    fd: File descriptor for the client connection
+
+    @return
+    0 on success, 1 on internal error
+*/
 int handle_login(HandlerArgs *args, int fd)
 {
     char     username[NAME_BUFFER_SIZE];
@@ -83,6 +102,16 @@ int handle_login(HandlerArgs *args, int fd)
     return ret;
 }
 
+/*
+    Handles account creation by validating input and storing new user data.
+
+    @param
+    args: Pointer to HandlerArgs containing header, payload, and server data
+    fd: File descriptor for the client connection
+
+    @return
+    0 on success, 1 on internal error
+*/
 int handle_acc_create(HandlerArgs *args, int fd)
 {
     char     username[NAME_BUFFER_SIZE];
@@ -124,6 +153,16 @@ int handle_acc_create(HandlerArgs *args, int fd)
  * Issue with handling logouts is that the main poll loop is already polling for disconnect events, the fd might be cleaned up
  * before this request is even read.
  */
+/*
+    Handles user logout by clearing session data and closing the connection.
+
+    @param
+    args: Pointer to HandlerArgs containing header and server data
+    fd: File descriptor for the client connection
+
+    @return
+    Always returns 0
+*/
 int handle_logout(HandlerArgs *args, int fd)
 {
     // Check sender id matches the actual id stored in the fd_map
@@ -148,6 +187,18 @@ int handle_logout(HandlerArgs *args, int fd)
  * This extracts specifically two fields from the payload: username followed by password (for login/acc create)
  * NEEDS ERROR HANDLING FOR EMPTY PASSWORD MAYBE? - Will need to discuss with client groups perhaps - how would they even send an "empty" password?
  */
+/*
+    Extracts username and password fields from the payload.
+
+    @param
+    payload_buffer: Pointer to the start of the payload buffer
+    username: Buffer to store the extracted username
+    password: Buffer to store the extracted password
+    remaining_bytes: Pointer to remaining expected payload bytes
+
+    @return
+    0 on success, 1 on failure
+*/
 int extract_user_pass(char *payload_buffer, char *username, char *password, uint16_t *remaining_bytes)
 {
     if(extract_field(&payload_buffer, username, remaining_bytes, P_UTF8STRING))
@@ -172,6 +223,18 @@ int extract_user_pass(char *payload_buffer, char *username, char *password, uint
  * If you are unsure how to incorporate this into a handle_xxxx function and the setup it requires, read handle_login/extract_user_pass
  * functions to get an idea of what the calling function needs in order to make use of the payload length checking.
  */
+/*
+    Extracts a single payload field of the given BER tag into the provided buffer.
+
+    @param
+    payload_ptr: Pointer to the current position in the payload buffer
+    buffer: Destination to store the extracted data
+    byte_threshold: Pointer to the number of remaining payload bytes
+    ber_tag: Expected BER tag for the field
+
+    @return
+    0 on success, non-zero on failure
+*/
 int extract_field(char **payload_ptr, void *buffer, uint16_t *byte_threshold, uint8_t ber_tag)
 {
     const int SUCCESS                 = 0;
@@ -210,6 +273,18 @@ int extract_field(char **payload_ptr, void *buffer, uint16_t *byte_threshold, ui
     return SUCCESS;
 }
 
+/*
+    Attempts to create a new user account by checking existence, generating a UID, and storing data.
+
+    @param
+    user_db: Handle to the user database
+    metadata_db: Handle to the metadata database
+    username: Username to register
+    password: Password to associate with the account
+
+    @return
+    0 on success, non-zero on failure
+*/
 int try_acc_create(DBM *user_db, DBM *metadata_db, const char *username, const char *password)
 {
     const int USERNAME_TAKEN = 1;
@@ -238,6 +313,16 @@ int try_acc_create(DBM *user_db, DBM *metadata_db, const char *username, const c
     return 0;
 }
 
+/*
+    Checks whether a user exists in the user database.
+
+    @param
+    user_db: Handle to the user database
+    username: Username to check for existence
+
+    @return
+    1 if user exists, 0 if not
+*/
 int check_user_exists(DBM *user_db, const char *username)
 {
     const int   USER_EXISTS    = 1;
@@ -259,6 +344,15 @@ int check_user_exists(DBM *user_db, const char *username)
     return USER_EXISTS;
 }
 
+/*
+    Retrieves and increments the user ID counter in the metadata database.
+
+    @param
+    metadata_db: Handle to the metadata database
+
+    @return
+    New UID on success, 0 on failure
+*/
 uint16_t increment_uid(DBM *metadata_db)
 {
     const uint16_t FIRST_UID = 1;
@@ -284,6 +378,18 @@ uint16_t increment_uid(DBM *metadata_db)
     return uid;    // returned the incremented uid to assign to the user
 }
 
+/*
+    Inserts a new user record into the user database with their UID and password.
+
+    @param
+    user_db: Handle to the user database
+    username: Username to insert
+    password: Password to associate with the username
+    uid: Unique user ID to assign
+
+    @return
+    0 on success, 1 if username already exists, -1 on error
+*/
 int insert_new_user(DBM *user_db, const char *username, const char *password, uint16_t uid)
 {
     char       *serialized_data;
@@ -313,6 +419,19 @@ int insert_new_user(DBM *user_db, const char *username, const char *password, ui
     return result;
 }
 
+/*
+    Attempts to log in a user by validating credentials and updating session data.
+
+    @param
+    user_db: Handle to the user database
+    fd_map: Mapping of file descriptors to user session data
+    fd: File descriptor of the client
+    username: Username to authenticate
+    password: Password to verify
+
+    @return
+    0 on success, 1 if authentication fails
+*/
 int try_login(DBM *user_db, SessionUser *fd_map, int fd, const char *username, const char *password)
 {
     const int INVALID_AUTH = 1;
@@ -447,6 +566,16 @@ int try_login(DBM *user_db, SessionUser *fd_map, int fd, const char *username, c
 //     return ret;
 // }
 
+/*
+    Handles a chat request and broadcasts it to all connected clients.
+
+    @param
+    args: Pointer to HandlerArgs containing request and server data
+    fd: File descriptor of the sender
+
+    @return
+    0 on success or handled error, 1 on system failure
+*/
 int handle_chat(HandlerArgs *args, int fd)
 {
     char        timestamp_buf[TIMESTAMP_BUFFER_SIZE];
@@ -497,6 +626,19 @@ int handle_chat(HandlerArgs *args, int fd)
     return 0;
 }
 
+/*
+    Extracts the timestamp, message, and username fields from a chat payload.
+
+    @param
+    hd: Pointer to the parsed header
+    payload_buffer: Raw payload buffer
+    timestamp_buf: Output buffer for the timestamp
+    message_buf: Output buffer for the message
+    usr_buf: Output buffer for the username
+
+    @return
+    0 on success, 1 on failure
+*/
 int extract_chat_fields(const HeaderData *hd, char *payload_buffer, char *timestamp_buf, char *message_buf, char *usr_buf)
 {
     uint16_t byte_threshold;
@@ -525,6 +667,15 @@ int extract_chat_fields(const HeaderData *hd, char *payload_buffer, char *timest
     return 0;
 }
 
+/*
+    Validates that the timestamp string is in GeneralizedTime format and represents a real date/time.
+
+    @param
+    timestamp: Timestamp string to validate
+
+    @return
+    1 if valid, 0 if invalid
+*/
 int is_valid_timestamp(const char *timestamp)
 {
     struct tm time = {0};
