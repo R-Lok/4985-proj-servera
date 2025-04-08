@@ -4,6 +4,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+/*
+    Stores a string value in the database under the given key.
+
+    @param
+    db: Pointer to the DBM database
+    key: Key to store the value under
+    value: String value to store
+
+    @return
+    0 on success, non-zero on failure
+*/
 int store_string(DBM *db, const char *key, const char *value)
 {
     const_datum key_datum   = MAKE_CONST_DATUM(key);
@@ -12,6 +23,17 @@ int store_string(DBM *db, const char *key, const char *value)
     return dbm_store(db, *(datum *)&key_datum, *(datum *)&value_datum, DBM_REPLACE);
 }
 
+/*
+    Stores a 16-bit unsigned integer in the database under the given key.
+
+    @param
+    db: Pointer to the DBM database
+    key: Key to store the value under
+    value: 16-bit unsigned integer to store
+
+    @return
+    0 on success, non-zero on failure
+*/
 int store_uint16(DBM *db, const char *key, uint16_t value)
 {
     const_datum key_datum = MAKE_CONST_DATUM(key);
@@ -34,7 +56,16 @@ int store_uint16(DBM *db, const char *key, uint16_t value)
     return result;
 }
 
-// **Function to retrieve a string**
+/*
+    Retrieves a string from the database by key.
+
+    @param
+    db: Pointer to the DBM database
+    key: Key associated with the value to retrieve
+
+    @return
+    String value on success, NULL on failure
+*/
 char *retrieve_string(DBM *db, const char *key)
 {
     const_datum key_datum;
@@ -65,7 +96,17 @@ char *retrieve_string(DBM *db, const char *key)
     return retrieved_str;
 }
 
-// **Function to retrieve an integer**
+/*
+    Retrieves a uint16_t from the database by key.
+
+    @param
+    db: Pointer to the DBM database
+    key: Key associated with the value to retrieve
+    result: Output pointer to store the retrieved value
+
+    @return
+    0 on success, -1 on failure
+*/
 int retrieve_uint16(DBM *db, const char *key, uint16_t *result)
 {
     datum       fetched;
