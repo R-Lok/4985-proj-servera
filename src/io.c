@@ -10,6 +10,17 @@
 #define TIMEOUT_DURATION 6000
 #define MS_PER_SECOND 1000
 
+/*
+    Reads a specified number of bytes from a file descriptor with timeout handling.
+
+    @param
+    fd: File descriptor to read from
+    buffer: Buffer to store the read data
+    bytes_to_read: Number of bytes to read
+
+    @return
+    FULLY_READ on success, TIMEOUT or error code on failure
+*/
 int read_fully(int fd, char *buffer, size_t bytes_to_read)
 {
     clock_t start_tick;
@@ -58,6 +69,17 @@ int read_fully(int fd, char *buffer, size_t bytes_to_read)
     return FULLY_READ;
 }
 
+/*
+    Writes a specified number of bytes to a file descriptor with timeout handling.
+
+    @param
+    fd: File descriptor to write to
+    buffer: Buffer containing data to write
+    bytes_to_write: Number of bytes to write
+
+    @return
+    FULLY_WRITTEN on success, TIMEOUT or error code on failure
+*/
 int write_fully(int fd, const char *buffer, size_t bytes_to_write)
 {
     clock_t start_tick;
