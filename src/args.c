@@ -10,6 +10,15 @@
 static int convert_port(const char *str, in_port_t *port);
 void       print_usage(void);
 
+/*
+    Parses command-line arguments to extract a port value using -p.
+
+    argc: Argument count
+    argv: Argument values
+    port_var: Pointer to store the parsed port value
+
+    return: 0 on success, 1 on failure
+*/
 int parse_port(int argc, char **argv, in_port_t *port_var)
 {
     int opt;
@@ -38,6 +47,14 @@ int parse_port(int argc, char **argv, in_port_t *port_var)
     return 0;
 }
 
+/*
+    Converts a string to a valid in_port_t port number if within range.
+
+    str: String representation of the port
+    port: Pointer to store the converted port value
+
+    return: 0 on success, 1 on invalid input
+*/
 static int convert_port(const char *str, in_port_t *port)
 {
     char *endptr;
@@ -64,11 +81,16 @@ static int convert_port(const char *str, in_port_t *port)
     return 0;
 }
 
-void print_usage(void)
-{
-    printf("To run: ./main \n Optional flags: -p <port number between 0 and 65535>");
-}
+/*
+    Parses command-line arguments for IP address and optional port number.
 
+    argc: Argument count
+    argv: Argument vector
+    port_var: Pointer to store the parsed port
+    ipv4: Buffer to store the parsed IPv4 address
+
+    return: 0 on success, 1 on error
+*/
 int parse_addr(int argc, char **argv, in_port_t *port_var, char *ipv4)
 {
     int opt;
@@ -100,6 +122,17 @@ int parse_addr(int argc, char **argv, in_port_t *port_var, char *ipv4)
     return 0;
 }
 
+/*
+    Prints usage instructions for running the main server program.
+*/
+void print_usage(void)
+{
+    printf("To run: ./main \n Optional flags: -p <port number between 0 and 65535>");
+}
+
+/*
+    Prints usage instructions for running the client program.
+*/
 void print_usage_client(void)
 {
     printf("To run: ./client -i <ipv4 address> \n Optional flags: -p <port number between 0 and 65535>");
