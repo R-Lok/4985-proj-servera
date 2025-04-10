@@ -29,6 +29,13 @@ static int  handle_new_client(int client_fd, ServerData *sd);
 static void handle_disconnect_events(ServerData *sd);
 static int  handle_pollins(ServerData *sd);
 
+/*
+    Extracts header fields from a raw byte buffer into a HeaderData struct.
+
+    @param
+    buffer: Raw header buffer
+    header: Pointer to HeaderData to populate
+*/
 void extract_header(const char *buffer, HeaderData *header)
 {
     header->packet_type  = (uint8_t)buffer[0];    // no converting to host order as one byte only
@@ -41,6 +48,15 @@ void extract_header(const char *buffer, HeaderData *header)
     header->payload_len = ntohs(header->payload_len);
 }
 
+/*
+    Validates the protocol version and packet type of a header.
+
+    @param
+    header: Pointer to the HeaderData to validate
+
+    @return
+    1 if valid, 0 if invalid
+*/
 int is_valid_header(const HeaderData *header)
 {
     if(is_valid_version(header->protocol_ver) && is_valid_packet_type(header->packet_type))
@@ -50,11 +66,29 @@ int is_valid_header(const HeaderData *header)
     return 0;
 }
 
+/*
+    Checks if the given protocol version is supported.
+
+    @param
+    protocol_ver: Protocol version to validate
+
+    @return
+    1 if valid, 0 if invalid
+*/
 int is_valid_version(uint8_t protocol_ver)
 {
     return protocol_ver <= PROTOCOL_VERSION;
 }
 
+/*
+    Checks if the given packet type is one of the supported types.
+
+    @param
+    packet_type: Packet type to validate
+
+    @return
+    1 if valid, 0 if invalid
+*/
 int is_valid_packet_type(uint8_t packet_type)
 {
     switch(packet_type)
@@ -69,6 +103,17 @@ int is_valid_packet_type(uint8_t packet_type)
     }
 }
 
+/*
+    Sends a SYS_ERROR packet to the specified file descriptor with an error code and message.
+
+    @param
+    fd: Destination file descriptor
+    err_code: Error code to send
+    err_msg: Error message to send
+
+    @return
+    0 on success, 1 on failure
+*/
 int send_sys_error(int fd, uint8_t err_code, const char *err_msg)
 {
     HeaderData   hd;
@@ -145,9 +190,16 @@ payload_fail:
     return ret;
 }
 
-/**
- * packet_type here means what kind of packet this sys_success is responding to (confirming the success of)
- */
+/*
+    Sends a SYS_SUCCESS packet to confirm successful handling of a specific request type.
+
+    @param
+    fd: Destination file descriptor
+    packet_type: Type of packet being acknowledged
+
+    @return
+    0 on success, 1 on failure
+*/
 int send_sys_success(int fd, uint8_t packet_type)
 {
     HeaderData   hd;
@@ -210,6 +262,13 @@ payload_fail:
     return ret;
 }
 
+/*
+    Serializes a HeaderData struct into a byte array for transmission.
+
+    @param
+    arr: Destination buffer for serialized header
+    hd: Pointer to HeaderData struct
+*/
 void pickle_header(char *arr, const HeaderData *hd)
 {
     const uint16_t host_order_sender_id   = htons(hd->sender_id);
@@ -224,6 +283,17 @@ void pickle_header(char *arr, const HeaderData *hd)
 
 /*MAKE SURE THE PAYLOAD_FIELDS ELEMENTS ARE IN THE SAME ORDER AS LISTED IN THE PROTOCOL!
 ALSO MAKE SURE THAT payload_len ACCOUNTS FOR THE BYTES NEEDED BY THE BER TAG + BER LENGTH */
+/*
+    Constructs a payload from an array of PayloadField structs.
+
+    @param
+    payload_fields: Array of fields to include in the payload
+    num_fields: Number of fields in the array
+    payload_len: Total length of the payload
+
+    @return
+    Pointer to the constructed payload, or NULL on failure
+*/
 char *construct_payload(PayloadField *payload_fields, size_t num_fields, size_t payload_len)
 {
     // I'm just iterating through all the PayloadField structs, and writing them into the payload buffer.
@@ -249,7 +319,18 @@ char *construct_payload(PayloadField *payload_fields, size_t num_fields, size_t 
     return payload_ptr_copy;
 }
 
-// Combines header and payload to make the full message
+/*
+    Combines a header and payload into a full message
+
+    @param
+    header: Pointer to the serialized header
+    payload: Pointer to the serialized payload
+    header_len: Length of the header in bytes
+    payload_len: Length of the payload in bytes
+
+    @return
+    Pointer to the combined message, or NULL on failure
+*/
 char *construct_message(const char *header, const char *payload, size_t header_len, size_t payload_len)
 {
     char *msg;
@@ -266,6 +347,16 @@ char *construct_message(const char *header, const char *payload, size_t header_l
     return msg;
 }
 
+/*
+    Handles a single client request by reading, validating, and dispatching the request.
+
+    @param
+    fd: File descriptor for the client socket
+    server_data: Pointer to the server state
+
+    @return
+    1 on internal error, 0 otherwise
+*/
 int handle_fd(int fd, ServerData *server_data)
 {
     int            ret;
@@ -344,6 +435,15 @@ bad_req:
     return ret;
 }
 
+/*
+    Allocates a buffer for reading the payload.
+
+    @param
+    payload_len: Length of the payload to allocate
+
+    @return
+    Pointer to the allocated buffer, or NULL on failure
+*/
 char *malloc_payload_buffer(uint16_t payload_len)
 {
     char *buffer;
@@ -357,6 +457,16 @@ char *malloc_payload_buffer(uint16_t payload_len)
     return buffer;
 }
 
+/*
+    Handles the result of a read operation and sends appropriate system error messages.
+
+    @param
+    res: Result code from read_fully
+    fd: File descriptor to send response to
+
+    @return
+    0 on success, 1 on write error, 2 if client disconnected, 3 if timeout
+*/
 int handle_read_request_res(int res, int fd)
 {
     if(res == TIMEOUT)
@@ -379,6 +489,16 @@ int handle_read_request_res(int res, int fd)
     return 0;
 }
 
+/*
+    Sends a login success message to the client with the assigned user ID.
+
+    @param
+    fd: File descriptor to write to
+    uid: User ID to include in the payload
+
+    @return
+    0 on success, 1 on failure
+*/
 int send_login_success(int fd, uint16_t uid)
 {
     HeaderData   hd;
@@ -443,6 +563,16 @@ payload_fail:
     return ret;
 }
 
+/*
+    Sends a chat received acknowledgment to the client.
+
+    @param
+    fd: File descriptor to write to
+    sender_id: ID of the user who sent the message
+
+    @return
+    0 on success, 1 on failure
+*/
 int send_cht_received(int fd, uint16_t sender_id)
 {
     HeaderData hd;
@@ -463,6 +593,17 @@ int send_cht_received(int fd, uint16_t sender_id)
     return 0;
 }
 
+/*
+    Handles new client connections and incoming data.
+
+    @param
+    sock_fd: Server socket file descriptor
+    addr: Pointer to the server address struct
+    running: Flag to control server loop execution
+
+    @return
+    0 on success, non-zero on failure
+*/
 int handle_connections(int sock_fd, struct sockaddr_in *addr, volatile sig_atomic_t *running)
 {
     int        ret;
@@ -579,6 +720,14 @@ int handle_connections(int sock_fd, struct sockaddr_in *addr, volatile sig_atomi
     return ret;
 }
 
+/*
+    Removes a pollfd entry by replacing it with the last active client and clearing the last entry.
+
+    @param
+    clients: Array of pollfd structs
+    index: Index of the client to remove
+    num_clients: Total number of connected clients
+*/
 static void remove_pollfd(struct pollfd *clients, nfds_t index, nfds_t num_clients)
 {
     // copy fd of last element in array to this index. Set fd of the (previously) last element to -1 (poll ignores -1)
@@ -591,6 +740,12 @@ static void remove_pollfd(struct pollfd *clients, nfds_t index, nfds_t num_clien
     clients[num_clients - 1].events  = 0;
 }
 
+/*
+    Handles disconnection events by closing client sockets and cleaning up associated session data.
+
+    @param
+    sd: Pointer to ServerData containing client and session information
+*/
 static void handle_disconnect_events(ServerData *sd)
 {
     for(nfds_t i = 0; i < sd->num_clients; i++)
@@ -615,6 +770,15 @@ static void handle_disconnect_events(ServerData *sd)
     }
 }
 
+/*
+    Processes POLLIN events for all connected clients and handles incoming data.
+
+    @param
+    sd: Pointer to ServerData containing client and session information
+
+    @return
+    1 if a fatal error occurred during handling, 0 otherwise
+*/
 static int handle_pollins(ServerData *sd)
 {
     // printf("handling pollins\n");
@@ -632,6 +796,16 @@ static int handle_pollins(ServerData *sd)
     return 0;
 }
 
+/*
+    Registers a new client by setting the file descriptor to non-blocking and adding it to the clients array.
+
+    @param
+    client_fd: File descriptor of the new client
+    sd: Pointer to ServerData to store client info
+
+    @return
+    0 on success, 1 on failure
+*/
 static int handle_new_client(int client_fd, ServerData *sd)
 {
     int err;

@@ -15,6 +15,17 @@ static volatile sig_atomic_t running = 1;    // Global flag for whether the serv
 
 void handle_signal(int signal);
 
+/*
+    Main server entry point. Parses port argument, sets up and starts a non-blocking server socket,
+    then enters the connection handling loop.
+
+    @param
+    argc: Argument count
+    argv: Argument values
+
+    @return
+    EXIT_SUCCESS or EXIT_FAILURE
+ */
 int main(int argc, char **argv)
 {
     in_port_t          port;
@@ -59,6 +70,12 @@ int main(int argc, char **argv)
     return EXIT_SUCCESS;
 }
 
+/*
+    Handles SIGINT to shut down the server.
+
+    @param
+    signal: The received signal
+ */
 void handle_signal(int signal)
 {
     if(signal == SIGINT)
