@@ -39,7 +39,7 @@ Link your .flags folder
 Copy your santizers.txt and supported_c_compilers.txt files into the directory
 
 ```bash
-cp <path to your santizers.txt> .
+cp <path to your sanitizers.txt> .
 cp <path to your supported_c_compilers.txt> .
 ```
 
