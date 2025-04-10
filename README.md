@@ -1,29 +1,27 @@
-# template-c Repository Guide
-
-Welcome to the `c template` repository. This guide will help you set up and run the provided scripts.
-
+# 4985-servera Repository Guide
 ## **Table of Contents**
 
 1. [Cloning the Repository](#cloning-the-repository)
-2. [Prerequisites](#Prerequisites)
-3. [Running the `generate-cmakelists.sh` Script](#running-the-generate-cmakelistssh-script)
-4. [Running the `change-compiler.sh` Script](#running-the-change-compilersh-script)
-5. [Running the `build.sh` Script](#running-the-buildsh-script)
+2. [Running the `generate-cmakelists.sh` Script](#running-the-generate-cmakelistssh-script)
+3. [Running the `change-compiler.sh` Script](#running-the-change-compilersh-script)
+4. [Running the `build.sh` Script](#running-the-buildsh-script)
 5. [Running the `build-all.sh` Script](#running-the-build-allsh-script)
 6. [Copy the template to start a new project](#copy-the-template-to-start-a-new-project)
+7. [Running the application](#running-the-application)
 
 ## **Cloning the Repository**
 
 Clone the repository using the following command:
 
 ```bash
-git clone https://github.com/programming101dev/template-c.git
+git clone https://github.com/R-Lok/4985-proj-servera.git
 ```
 
 Navigate to the cloned directory:
 
 ```bash
-cd template-c
+cd 4985-proj-servera
+
 ```
 
 Ensure the scripts are executable:
@@ -32,14 +30,18 @@ Ensure the scripts are executable:
 chmod +x *.sh
 ```
 
-## **Prerequisites**
+Link your .flags folder
 
-- to ensure you have all of the required tools installed, run:
 ```bash
-./check-env.sh
+./link-flags.sh <path to your .flags folder>
 ```
 
-If you are missing tools follow these [instructions](https://docs.google.com/document/d/1ZPqlPD1mie5iwJ2XAcNGz7WeA86dTLerFXs9sAuwCco/edit?usp=drive_link).
+Copy your santizers.txt and supported_c_compilers.txt files into the directory
+
+```bash
+cp <path to your santizers.txt> .
+cp <path to your supported_c_compilers.txt> .
+```
 
 ## **Running the generate-cmakelists.sh Script**
 
@@ -79,22 +81,11 @@ To build the program with all compilers run:
 ./build-all.sh
 ```
 
-## **Copy the template to start a new project**
+## **Running the application**
 
-To create a new project from the template, run:
+To run the application after building
 
 ```bash
-./copy-template.sh <desitnation directory>
+./build/starter -i <IPv4 address of server manager> -p <port of server manager>
 ```
-
-This will copy all of the files needed to start a new project.
-
-1. Edit the files.txt
-2. run ./generate-cmakelists.sh
-3. run ./change-compiler.sh -c <compiler>
-4. run ./build.sh
-
-The files.txt file contains:
-<executable> <source files> <header files> <libraries>
-
-When you need to add/removes files to/from the project you must rerun the 4 steps above. 
+The -p flag and argument is optional. If not provided, it will connect to port 9000.
